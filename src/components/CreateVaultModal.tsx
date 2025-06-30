@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Users, FileText } from "lucide-react";
-import { toast } from "sonner";
 
 interface CreateVaultModalProps {
   isOpen: boolean;
@@ -25,13 +24,14 @@ const CreateVaultModal = ({ isOpen, onClose, onCreateVault }: CreateVaultModalPr
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      onCreateVault(formData);
+    try {
+      await onCreateVault(formData);
       setFormData({ name: "", description: "" });
+    } catch (error) {
+      console.error('Error in modal:', error);
+    } finally {
       setIsLoading(false);
-      toast.success("Family vault created successfully!");
-    }, 500);
+    }
   };
 
   const handleClose = () => {

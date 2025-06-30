@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Plus, Calendar, Camera, Mic, FileText, Trash2, Bot } from "lucide-react";
@@ -6,31 +7,98 @@ import CreateStoryModal from "./CreateStoryModal";
 import StoryDetailModal from "./StoryDetailModal";
 import AIChatBot from "./AIChatBot";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VaultViewProps {
   vault: any;
   onBack: () => void;
   user: any;
-  stories: any[];
-  onAddStory: (storyData: any) => void;
-  onDeleteStory: (storyId: string) => void;
+  onVaultUpdate: () => void;
 }
 
-const VaultView = ({ vault, onBack, user, stories, onAddStory, onDeleteStory }: VaultViewProps) => {
+const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
   const [isCreateStoryModalOpen, setIsCreateStoryModalOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState(null);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [stories, setStories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleCreateStory = (storyData: any) => {
-    onAddStory(storyData);
-    setIsCreateStoryModalOpen(false);
-    toast.success("Story added successfully!");
+  // Fetch stories from Supabase
+  useEffect(() => {
+    if (vault?.id && user?.id) {
+      fetchStories();
+    }
+  }, [vault?.id, user?.id]);
+
+  const fetchStories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('vault_id', vault.id)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setStories(data || []);
+    } catch (error) {
+      console.error('Error fetching stories:', error);
+      toast.error("Failed to load stories");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteStory = (storyId: string) => {
-    onDeleteStory(storyId);
-    toast.success("Story deleted successfully!");
+  const handleCreateStory = async (storyData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('stories')
+        .insert([{
+          ...storyData,
+          vault_id: vault.id,
+          user_id: user.id,
+          author: user.user_metadata?.full_name || user.email
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStories([data, ...stories]);
+      setIsCreateStoryModalOpen(false);
+      onVaultUpdate(); // Update vault story count
+      toast.success("Story added successfully!");
+    } catch (error) {
+      console.error('Error creating story:', error);
+      toast.error("Failed to add story");
+    }
   };
+
+  const handleDeleteStory = async (storyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('stories')
+        .delete()
+        .eq('id', storyId);
+
+      if (error) throw error;
+
+      setStories(stories.filter(story => story.id !== storyId));
+      onVaultUpdate(); // Update vault story count
+      toast.success("Story deleted successfully!");
+    } catch (error) {
+      console.error('Error deleting story:', error);
+      toast.error("Failed to delete story");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
+        <div className="text-amber-600">Loading stories...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
@@ -142,7 +210,7 @@ const VaultView = ({ vault, onBack, user, stories, onAddStory, onDeleteStory }: 
                                 <span>{story.images.length} photo{story.images.length > 1 ? 's' : ''}</span>
                               </div>
                             )}
-                            {story.audioUrl && (
+                            {story.audio_url && (
                               <div className="flex items-center gap-1">
                                 <Mic className="w-4 h-4" />
                                 <span>Audio</span>
@@ -153,7 +221,7 @@ const VaultView = ({ vault, onBack, user, stories, onAddStory, onDeleteStory }: 
                             <span>By {story.author}</span>
                             <div className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              <span>{new Date(story.createdAt).toLocaleDateString()}</span>
+                              <span>{new Date(story.created_at).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </div>

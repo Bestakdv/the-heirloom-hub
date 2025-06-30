@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Plus, LogOut, Users, Calendar, FileText } from "lucide-react";
@@ -7,6 +7,7 @@ import CreateVaultModal from "./CreateVaultModal";
 import VaultView from "./VaultView";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardProps {
   user: any;
@@ -17,67 +18,73 @@ const Dashboard = ({ user }: DashboardProps) => {
   const [isCreateVaultModalOpen, setIsCreateVaultModalOpen] = useState(false);
   const [selectedVault, setSelectedVault] = useState(null);
   const [vaults, setVaults] = useState([]);
-  const [vaultStories, setVaultStories] = useState<Record<string, any[]>>({});
+  const [loading, setLoading] = useState(true);
 
-  const handleCreateVault = (vaultData: any) => {
-    const newVault = {
-      id: Date.now().toString(),
-      ...vaultData,
-      storyCount: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setVaults([...vaults, newVault]);
-    setVaultStories({ ...vaultStories, [newVault.id]: [] });
-    setIsCreateVaultModalOpen(false);
-  };
+  // Fetch vaults from Supabase
+  useEffect(() => {
+    if (user?.id) {
+      fetchVaults();
+    }
+  }, [user?.id]);
 
-  const handleDeleteVault = (vaultId: string) => {
-    setVaults(vaults.filter(vault => vault.id !== vaultId));
-    const updatedStories = { ...vaultStories };
-    delete updatedStories[vaultId];
-    setVaultStories(updatedStories);
-    if (selectedVault && selectedVault.id === vaultId) {
-      setSelectedVault(null);
+  const fetchVaults = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vaults')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setVaults(data || []);
+    } catch (error) {
+      console.error('Error fetching vaults:', error);
+      toast.error("Failed to load vaults");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAddStory = (vaultId: string, storyData: any) => {
-    const newStory = {
-      id: Date.now().toString(),
-      ...storyData,
-      createdAt: new Date().toISOString().split('T')[0],
-      author: user.user_metadata?.full_name || user.email
-    };
-    
-    const currentStories = vaultStories[vaultId] || [];
-    setVaultStories({
-      ...vaultStories,
-      [vaultId]: [newStory, ...currentStories]
-    });
+  const handleCreateVault = async (vaultData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('vaults')
+        .insert([{
+          ...vaultData,
+          user_id: user.id
+        }])
+        .select()
+        .single();
 
-    // Update vault story count
-    setVaults(vaults.map(vault => 
-      vault.id === vaultId 
-        ? { ...vault, storyCount: (currentStories.length + 1) }
-        : vault
-    ));
+      if (error) throw error;
+
+      setVaults([data, ...vaults]);
+      setIsCreateVaultModalOpen(false);
+      toast.success("Family vault created successfully!");
+    } catch (error) {
+      console.error('Error creating vault:', error);
+      toast.error("Failed to create vault");
+    }
   };
 
-  const handleDeleteStory = (vaultId: string, storyId: string) => {
-    const currentStories = vaultStories[vaultId] || [];
-    const updatedStories = currentStories.filter(story => story.id !== storyId);
-    
-    setVaultStories({
-      ...vaultStories,
-      [vaultId]: updatedStories
-    });
+  const handleDeleteVault = async (vaultId: string) => {
+    try {
+      const { error } = await supabase
+        .from('vaults')
+        .delete()
+        .eq('id', vaultId);
 
-    // Update vault story count
-    setVaults(vaults.map(vault => 
-      vault.id === vaultId 
-        ? { ...vault, storyCount: updatedStories.length }
-        : vault
-    ));
+      if (error) throw error;
+
+      setVaults(vaults.filter(vault => vault.id !== vaultId));
+      if (selectedVault && selectedVault.id === vaultId) {
+        setSelectedVault(null);
+      }
+      toast.success("Vault deleted successfully!");
+    } catch (error) {
+      console.error('Error deleting vault:', error);
+      toast.error("Failed to delete vault");
+    }
   };
 
   const handleLogout = async () => {
@@ -95,10 +102,16 @@ const Dashboard = ({ user }: DashboardProps) => {
         vault={selectedVault} 
         onBack={() => setSelectedVault(null)}
         user={user}
-        stories={vaultStories[selectedVault.id] || []}
-        onAddStory={(storyData) => handleAddStory(selectedVault.id, storyData)}
-        onDeleteStory={(storyId) => handleDeleteStory(selectedVault.id, storyId)}
+        onVaultUpdate={fetchVaults}
       />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
+        <div className="text-amber-600">Loading your vaults...</div>
+      </div>
     );
   }
 
@@ -187,11 +200,11 @@ const Dashboard = ({ user }: DashboardProps) => {
                   <div className="flex items-center justify-between text-sm text-amber-600">
                     <div className="flex items-center gap-1">
                       <FileText className="w-4 h-4" />
-                      <span>{vault.storyCount} stories</span>
+                      <span>{vault.story_count} stories</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
-                      <span>{new Date(vault.createdAt).toLocaleDateString()}</span>
+                      <span>{new Date(vault.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </CardContent>

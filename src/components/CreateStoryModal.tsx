@@ -18,7 +18,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
     title: "",
     content: "",
     images: [] as string[],
-    audioUrl: null as string | null
+    audio_url: null as string | null
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -34,12 +34,14 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
     
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      onCreateStory(formData);
-      setFormData({ title: "", content: "", images: [], audioUrl: null });
+    try {
+      await onCreateStory(formData);
+      setFormData({ title: "", content: "", images: [], audio_url: null });
+    } catch (error) {
+      console.error('Error in modal:', error);
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,7 +75,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'audio/wav' });
         const audioUrl = URL.createObjectURL(blob);
-        setFormData({ ...formData, audioUrl });
+        setFormData({ ...formData, audio_url: audioUrl });
         toast.success("Audio recording saved!");
       };
       
@@ -94,10 +96,10 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
   };
 
   const removeAudio = () => {
-    if (formData.audioUrl) {
-      URL.revokeObjectURL(formData.audioUrl);
+    if (formData.audio_url) {
+      URL.revokeObjectURL(formData.audio_url);
     }
-    setFormData({ ...formData, audioUrl: null });
+    setFormData({ ...formData, audio_url: null });
   };
 
   const handleClose = () => {
@@ -108,10 +110,10 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
     formData.images.forEach(imageUrl => {
       URL.revokeObjectURL(imageUrl);
     });
-    if (formData.audioUrl) {
-      URL.revokeObjectURL(formData.audioUrl);
+    if (formData.audio_url) {
+      URL.revokeObjectURL(formData.audio_url);
     }
-    setFormData({ title: "", content: "", images: [], audioUrl: null });
+    setFormData({ title: "", content: "", images: [], audio_url: null });
     onClose();
   };
 
@@ -200,7 +202,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
           {/* Audio Recording Section */}
           <div className="space-y-3">
             <Label>Audio Recording</Label>
-            {!formData.audioUrl ? (
+            {!formData.audio_url ? (
               <Button
                 type="button"
                 variant="outline"
@@ -222,7 +224,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
             ) : (
               <div className="flex items-center gap-2 p-3 bg-amber-50 rounded border border-amber-200">
                 <audio controls className="flex-1">
-                  <source src={formData.audioUrl} type="audio/wav" />
+                  <source src={formData.audio_url} type="audio/wav" />
                 </audio>
                 <Button
                   type="button"

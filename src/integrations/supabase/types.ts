@@ -33,6 +33,83 @@ export type Database = {
         }
         Relationships: []
       }
+      stories: {
+        Row: {
+          audio_url: string | null
+          author: string
+          content: string
+          created_at: string
+          id: string
+          images: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+          vault_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          author: string
+          content: string
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+          vault_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          author?: string
+          content?: string
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          vault_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stories_vault_id_fkey"
+            columns: ["vault_id"]
+            isOneToOne: false
+            referencedRelation: "vaults"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaults: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          story_count: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          story_count?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          story_count?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
