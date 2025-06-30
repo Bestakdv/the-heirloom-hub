@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Users, Mic, Camera, Heart, ArrowRight } from "lucide-react";
+import { BookOpen, Users, Mic, Camera, Heart, ArrowRight, Bot } from "lucide-react";
 import AuthModal from "@/components/AuthModal";
 import Dashboard from "@/components/Dashboard";
 import { useAuth } from "@/hooks/useAuth";
@@ -37,7 +37,7 @@ const Index = () => {
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <BookOpen className="w-8 h-8 text-amber-600" />
-            <h1 className="text-2xl font-bold text-amber-900">Family Stories Hub</h1>
+            <h1 className="text-2xl font-bold text-amber-900">The Heirloom Hub</h1>
           </div>
           <Button 
             onClick={() => setIsAuthModalOpen(true)}
@@ -133,14 +133,14 @@ const Index = () => {
             <Card className="bg-white border-amber-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <CardHeader className="text-center pb-4">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-8 h-8 text-amber-600" />
+                  <Bot className="w-8 h-8 text-amber-600" />
                 </div>
-                <CardTitle className="text-xl text-amber-900">Timeline View</CardTitle>
+                <CardTitle className="text-xl text-amber-900">AI Story Assistant</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-amber-700 text-center">
-                  View your family's stories in chronological order. See how your family's 
-                  history unfolds through decades of memories and milestones.
+                  Get help from our AI assistant to discover story ideas, writing prompts, and 
+                  organize your family history. Turn memories into meaningful narratives.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -204,7 +204,7 @@ const Index = () => {
         <div className="container mx-auto max-w-6xl text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <BookOpen className="w-6 h-6" />
-            <span className="text-xl font-semibold">Family Stories Hub</span>
+            <span className="text-xl font-semibold">The Heirloom Hub</span>
           </div>
           <p className="text-amber-200">
             Preserving family memories, one story at a time.

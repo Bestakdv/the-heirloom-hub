@@ -122,7 +122,7 @@ const Dashboard = ({ user }: DashboardProps) => {
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <BookOpen className="w-8 h-8 text-amber-600" />
-            <h1 className="text-2xl font-bold text-amber-900">Family Stories Hub</h1>
+            <h1 className="text-2xl font-bold text-amber-900">The Heirloom Hub</h1>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-amber-700">Welcome, {user.user_metadata?.full_name || user.email}!</span>
