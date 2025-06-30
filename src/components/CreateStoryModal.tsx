@@ -45,10 +45,9 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      // In a real app, you'd upload these to a server
-      // For demo, we'll use placeholder URLs
-      const newImages = Array.from(files).map((file, index) => 
-        `/placeholder.svg?${Date.now()}-${index}`
+      // Create object URLs from the actual files
+      const newImages = Array.from(files).map((file) => 
+        URL.createObjectURL(file)
       );
       setFormData({ ...formData, images: [...formData.images, ...newImages] });
       toast.success(`${files.length} image(s) added`);
@@ -56,6 +55,9 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
   };
 
   const removeImage = (index: number) => {
+    const imageToRemove = formData.images[index];
+    // Revoke the object URL to free up memory
+    URL.revokeObjectURL(imageToRemove);
     const newImages = formData.images.filter((_, i) => i !== index);
     setFormData({ ...formData, images: newImages });
   };
@@ -101,6 +103,13 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
   const handleClose = () => {
     if (isRecording) {
       stopRecording();
+    }
+    // Clean up object URLs when closing
+    formData.images.forEach(imageUrl => {
+      URL.revokeObjectURL(imageUrl);
+    });
+    if (formData.audioUrl) {
+      URL.revokeObjectURL(formData.audioUrl);
     }
     setFormData({ title: "", content: "", images: [], audioUrl: null });
     onClose();
