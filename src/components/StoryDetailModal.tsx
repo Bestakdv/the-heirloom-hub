@@ -27,7 +27,7 @@ const StoryDetailModal = ({ story, onClose }: StoryDetailModalProps) => {
               </div>
               <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                <span>{new Date(story.createdAt).toLocaleDateString()}</span>
+                <span>{new Date(story.created_at).toLocaleDateString()}</span>
               </div>
             </div>
           </DialogHeader>
@@ -71,7 +71,7 @@ const StoryDetailModal = ({ story, onClose }: StoryDetailModalProps) => {
             )}
 
             {/* Audio */}
-            {story.audioUrl && (
+            {story.audio_url && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Mic className="w-5 h-5 text-amber-600" />
@@ -79,7 +79,7 @@ const StoryDetailModal = ({ story, onClose }: StoryDetailModalProps) => {
                 </div>
                 <div className="bg-amber-50 p-4 rounded border border-amber-200">
                   <audio controls className="w-full">
-                    <source src={story.audioUrl} type="audio/wav" />
+                    <source src={story.audio_url} type="audio/wav" />
                     Your browser does not support the audio element.
                   </audio>
                 </div>
