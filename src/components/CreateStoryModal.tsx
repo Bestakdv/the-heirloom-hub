@@ -1,11 +1,10 @@
-
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Camera, Mic, Upload, Play, Stop, Trash2 } from "lucide-react";
+import { FileText, Camera, Mic, Upload, Play, Square, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface CreateStoryModalProps {
@@ -201,7 +200,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
               >
                 {isRecording ? (
                   <>
-                    <Stop className="w-4 h-4 mr-2" />
+                    <Square className="w-4 h-4 mr-2" />
                     Stop Recording
                   </>
                 ) : (
