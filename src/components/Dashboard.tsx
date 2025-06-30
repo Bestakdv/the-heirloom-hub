@@ -1,8 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, LogOut, Users, Calendar, FileText, Trash2, Crown, UserCheck } from "lucide-react";
+import { BookOpen, Plus, LogOut, Users, Calendar, FileText, Trash2, MoreVertical } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import CreateVaultModal from "./CreateVaultModal";
 import VaultView from "./VaultView";
@@ -14,22 +14,11 @@ interface DashboardProps {
   user: any;
 }
 
-interface VaultWithCollaboration {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
-  story_count: number;
-  user_id: string;
-  isOwner: boolean;
-  collaborationType?: "view_only" | "view_and_add";
-}
-
 const Dashboard = ({ user }: DashboardProps) => {
   const { signOut } = useAuth();
   const [isCreateVaultModalOpen, setIsCreateVaultModalOpen] = useState(false);
-  const [selectedVault, setSelectedVault] = useState<VaultWithCollaboration | null>(null);
-  const [vaults, setVaults] = useState<VaultWithCollaboration[]>([]);
+  const [selectedVault, setSelectedVault] = useState(null);
+  const [vaults, setVaults] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch vaults from Supabase
@@ -41,51 +30,14 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const fetchVaults = async () => {
     try {
-      // Fetch owned vaults
-      const { data: ownedVaults, error: ownedError } = await supabase
+      const { data, error } = await supabase
         .from('vaults')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (ownedError) throw ownedError;
-
-      // Fetch collaborative vaults
-      const { data: collaborativeVaults, error: collabError } = await supabase
-        .from('vault_collaborators')
-        .select(`
-          permission,
-          vaults (
-            id,
-            name,
-            description,
-            created_at,
-            story_count,
-            user_id
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (collabError) throw collabError;
-
-      // Combine and format vaults
-      const allVaults: VaultWithCollaboration[] = [
-        ...(ownedVaults || []).map(vault => ({
-          ...vault,
-          isOwner: true
-        })),
-        ...(collaborativeVaults || []).map(collab => ({
-          ...collab.vaults,
-          isOwner: false,
-          collaborationType: collab.permission
-        }))
-      ];
-
-      // Sort by creation date
-      allVaults.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-      setVaults(allVaults);
+      if (error) throw error;
+      setVaults(data || []);
     } catch (error) {
       console.error('Error fetching vaults:', error);
       toast.error("Failed to load vaults");
@@ -107,7 +59,7 @@ const Dashboard = ({ user }: DashboardProps) => {
 
       if (error) throw error;
 
-      setVaults([{ ...data, isOwner: true }, ...vaults]);
+      setVaults([data, ...vaults]);
       setIsCreateVaultModalOpen(false);
       toast.success("Family vault created successfully!");
     } catch (error) {
@@ -231,50 +183,36 @@ const Dashboard = ({ user }: DashboardProps) => {
                 key={vault.id} 
                 className="bg-white border-amber-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative group"
               >
-                <div className="absolute top-3 right-3 z-10 flex gap-1">
-                  {vault.isOwner ? (
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                      <Crown className="w-3 h-3 mr-1" />
-                      Owner
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      <UserCheck className="w-3 h-3 mr-1" />
-                      {vault.collaborationType === 'view_and_add' ? 'Collaborator' : 'Viewer'}
-                    </Badge>
-                  )}
-                  
-                  {vault.isOwner && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-amber-600 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => e.stopPropagation()}
+                <div className="absolute top-3 right-3 z-10">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-amber-600 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Vault</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete "{vault.name}"? This will permanently delete the vault and all its stories. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteVault(vault.id)}
+                          className="bg-red-600 hover:bg-red-700"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Vault</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{vault.name}"? This will permanently delete the vault and all its stories. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteVault(vault.id)}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
                 
                 <div 
@@ -282,7 +220,7 @@ const Dashboard = ({ user }: DashboardProps) => {
                   onClick={() => setSelectedVault(vault)}
                 >
                   <CardHeader>
-                    <div className="flex items-start justify-between pr-16">
+                    <div className="flex items-start justify-between pr-8">
                       <div className="flex-1">
                         <CardTitle className="text-xl text-amber-900 mb-2">
                           {vault.name}
