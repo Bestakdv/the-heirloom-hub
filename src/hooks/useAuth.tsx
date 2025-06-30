@@ -63,6 +63,17 @@ export const useAuth = () => {
     return { error };
   };
 
+  const resendConfirmation = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`
+      }
+    });
+    return { error };
+  };
+
   return {
     user,
     session,
@@ -70,5 +81,6 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
+    resendConfirmation,
   };
 };
