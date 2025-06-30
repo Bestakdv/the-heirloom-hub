@@ -1,28 +1,33 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, Mic, Camera, Heart, ArrowRight } from "lucide-react";
 import AuthModal from "@/components/AuthModal";
 import Dashboard from "@/components/Dashboard";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
+  const { user, loading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
 
-  const handleAuthSuccess = (userData: any) => {
-    setUser(userData);
-    setIsLoggedIn(true);
+  const handleAuthSuccess = () => {
     setIsAuthModalOpen(false);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setIsLoggedIn(false);
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center">
+          <BookOpen className="w-12 h-12 text-amber-600 mx-auto mb-4 animate-pulse" />
+          <p className="text-amber-700">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (isLoggedIn) {
-    return <Dashboard user={user} onLogout={handleLogout} />;
+  if (user) {
+    return <Dashboard user={user} />;
   }
 
   return (

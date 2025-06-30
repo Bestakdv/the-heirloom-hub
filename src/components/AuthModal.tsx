@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, Mail, Lock, User } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface AuthModalProps {
 }
 
 const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
+  const { signIn, signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({ name: "", email: "", password: "" });
@@ -23,32 +25,32 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    const { error } = await signIn(loginData.email, loginData.password);
+    
+    if (error) {
+      toast.error(error.message);
+    } else {
       toast.success("Welcome back!");
-      onAuthSuccess({
-        id: "user123",
-        name: "Demo User",
-        email: loginData.email
-      });
-      setIsLoading(false);
-    }, 1000);
+      onClose();
+    }
+    
+    setIsLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      toast.success("Account created successfully!");
-      onAuthSuccess({
-        id: "user123",
-        name: signupData.name,
-        email: signupData.email
-      });
-      setIsLoading(false);
-    }, 1000);
+    const { error } = await signUp(signupData.email, signupData.password, signupData.name);
+    
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Account created successfully! Please check your email to confirm your account.");
+      onClose();
+    }
+    
+    setIsLoading(false);
   };
 
   return (

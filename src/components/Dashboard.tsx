@@ -5,13 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BookOpen, Plus, LogOut, Users, Calendar, FileText } from "lucide-react";
 import CreateVaultModal from "./CreateVaultModal";
 import VaultView from "./VaultView";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface DashboardProps {
   user: any;
-  onLogout: () => void;
 }
 
-const Dashboard = ({ user, onLogout }: DashboardProps) => {
+const Dashboard = ({ user }: DashboardProps) => {
+  const { signOut } = useAuth();
   const [isCreateVaultModalOpen, setIsCreateVaultModalOpen] = useState(false);
   const [selectedVault, setSelectedVault] = useState(null);
   const [vaults, setVaults] = useState([
@@ -49,6 +51,15 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
     }
   };
 
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast.error("Error signing out");
+    } else {
+      toast.success("Signed out successfully");
+    }
+  };
+
   if (selectedVault) {
     return (
       <VaultView 
@@ -69,10 +80,10 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
             <h1 className="text-2xl font-bold text-amber-900">Family Stories Hub</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-amber-700">Welcome, {user.name}!</span>
+            <span className="text-amber-700">Welcome, {user.user_metadata?.full_name || user.email}!</span>
             <Button 
               variant="outline" 
-              onClick={onLogout}
+              onClick={handleLogout}
               className="border-amber-600 text-amber-700 hover:bg-amber-50"
             >
               <LogOut className="w-4 h-4 mr-2" />
@@ -84,7 +95,6 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8 max-w-6xl">
-        {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-amber-900 mb-2">Your Family Vaults</h2>
           <p className="text-amber-700">
@@ -92,7 +102,6 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
           </p>
         </div>
 
-        {/* Quick Actions */}
         <div className="mb-8">
           <Button 
             onClick={() => setIsCreateVaultModalOpen(true)}
@@ -104,7 +113,6 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
           </Button>
         </div>
 
-        {/* Vaults Grid */}
         {vaults.length === 0 ? (
           <Card className="text-center py-12 bg-white border-amber-200">
             <CardContent>
