@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,26 +15,7 @@ interface VaultViewProps {
 const VaultView = ({ vault, onBack, user }: VaultViewProps) => {
   const [isCreateStoryModalOpen, setIsCreateStoryModalOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState(null);
-  const [stories, setStories] = useState([
-    {
-      id: "1",
-      title: "Wedding Day Memories",
-      content: "The most beautiful day of our lives, surrounded by family and friends...",
-      images: ["/placeholder.svg"],
-      audioUrl: null,
-      createdAt: "2024-01-20",
-      author: "John Smith"
-    },
-    {
-      id: "2",
-      title: "Grandpa's War Stories",
-      content: "Stories from my grandfather about his time in World War II...",
-      images: [],
-      audioUrl: "/sample-audio.mp3",
-      createdAt: "2024-02-15", 
-      author: "Mary Smith"
-    }
-  ]);
+  const [stories, setStories] = useState([]);
 
   const handleCreateStory = (storyData: any) => {
     const newStory = {
