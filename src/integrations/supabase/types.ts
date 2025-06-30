@@ -80,6 +80,44 @@ export type Database = {
           },
         ]
       }
+      vault_collaborators: {
+        Row: {
+          created_at: string
+          id: string
+          invited_by: string
+          permission: Database["public"]["Enums"]["collaboration_permission"]
+          updated_at: string
+          user_id: string
+          vault_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_by: string
+          permission?: Database["public"]["Enums"]["collaboration_permission"]
+          updated_at?: string
+          user_id: string
+          vault_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_by?: string
+          permission?: Database["public"]["Enums"]["collaboration_permission"]
+          updated_at?: string
+          user_id?: string
+          vault_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vault_collaborators_vault_id_fkey"
+            columns: ["vault_id"]
+            isOneToOne: false
+            referencedRelation: "vaults"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vaults: {
         Row: {
           created_at: string
@@ -115,10 +153,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_has_vault_access: {
+        Args: { vault_id_param: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      collaboration_permission: "view_only" | "view_and_add"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -233,6 +274,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      collaboration_permission: ["view_only", "view_and_add"],
+    },
   },
 } as const
