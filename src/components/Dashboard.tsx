@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Plus, LogOut, Users, Calendar, FileText } from "lucide-react";
+import { BookOpen, Plus, LogOut, Users, Calendar, FileText, Trash2, MoreVertical } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import CreateVaultModal from "./CreateVaultModal";
 import VaultView from "./VaultView";
 import { useAuth } from "@/hooks/useAuth";
@@ -180,34 +181,70 @@ const Dashboard = ({ user }: DashboardProps) => {
             {vaults.map((vault) => (
               <Card 
                 key={vault.id} 
-                className="bg-white border-amber-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-                onClick={() => setSelectedVault(vault)}
+                className="bg-white border-amber-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative group"
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl text-amber-900 mb-2">
-                        {vault.name}
-                      </CardTitle>
-                      <CardDescription className="text-amber-700">
-                        {vault.description}
-                      </CardDescription>
+                <div className="absolute top-3 right-3 z-10">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-amber-600 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Vault</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete "{vault.name}"? This will permanently delete the vault and all its stories. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteVault(vault.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+                
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => setSelectedVault(vault)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between pr-8">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl text-amber-900 mb-2">
+                          {vault.name}
+                        </CardTitle>
+                        <CardDescription className="text-amber-700">
+                          {vault.description}
+                        </CardDescription>
+                      </div>
+                      <Users className="w-6 h-6 text-amber-600 flex-shrink-0 ml-2" />
                     </div>
-                    <Users className="w-6 h-6 text-amber-600 flex-shrink-0 ml-2" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-amber-600">
-                    <div className="flex items-center gap-1">
-                      <FileText className="w-4 h-4" />
-                      <span>{vault.story_count} stories</span>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between text-sm text-amber-600">
+                      <div className="flex items-center gap-1">
+                        <FileText className="w-4 h-4" />
+                        <span>{vault.story_count} stories</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{new Date(vault.created_at).toLocaleDateString()}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{new Date(vault.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </CardContent>
+                  </CardContent>
+                </div>
               </Card>
             ))}
           </div>
