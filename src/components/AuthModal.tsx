@@ -23,6 +23,28 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
   const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState("");
 
+  const getPasswordErrorMessage = (error: string) => {
+    if (error.toLowerCase().includes("password") && error.toLowerCase().includes("short")) {
+      return "Password must be at least 6 characters long.";
+    }
+    if (error.toLowerCase().includes("password") && error.toLowerCase().includes("weak")) {
+      return "Password is too weak. Please use a stronger password with a mix of letters, numbers, and symbols.";
+    }
+    if (error.toLowerCase().includes("password") && (error.toLowerCase().includes("format") || error.toLowerCase().includes("invalid"))) {
+      return "Password format is invalid. Please use at least 6 characters.";
+    }
+    if (error.toLowerCase().includes("signup") && error.toLowerCase().includes("disabled")) {
+      return "Account creation is currently disabled. Please contact support.";
+    }
+    if (error.toLowerCase().includes("email") && error.toLowerCase().includes("invalid")) {
+      return "Please enter a valid email address.";
+    }
+    if (error.toLowerCase().includes("email") && error.toLowerCase().includes("taken")) {
+      return "An account with this email already exists. Please try signing in instead.";
+    }
+    return error;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -56,7 +78,8 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
     const { data, error } = await signUp(signupData.email, signupData.password, signupData.name);
     
     if (error) {
-      toast.error(error.message);
+      const friendlyErrorMessage = getPasswordErrorMessage(error.message);
+      toast.error(friendlyErrorMessage);
     } else if (data?.user) {
       // Check if user needs email confirmation
       if (data.user.email_confirmed_at) {
@@ -92,7 +115,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
         <DialogHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <BookOpen className="w-6 h-6 text-amber-600" />
-            <DialogTitle className="text-2xl text-amber-900">Family Stories Hub</DialogTitle>
+            <DialogTitle className="text-2xl text-amber-900">The Heirloom Hub</DialogTitle>
           </div>
         </DialogHeader>
 
@@ -213,13 +236,16 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="Create a password"
+                      placeholder="At least 6 characters"
                       className="pl-10"
                       value={signupData.password}
                       onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                       required
                     />
                   </div>
+                  <p className="text-xs text-amber-600">
+                    Password must be at least 6 characters long
+                  </p>
                 </div>
                 <Button 
                   type="submit" 
