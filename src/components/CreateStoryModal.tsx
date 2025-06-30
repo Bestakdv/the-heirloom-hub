@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,14 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Camera, Mic, Upload, Play, Square, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CreateStoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateStory: (storyData: any) => void;
+  userId: string;
 }
 
-const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalProps) => {
+const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStoryModalProps) => {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -21,9 +24,63 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
     audio_url: null as string | null
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  const uploadImageToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('story-images')
+        .upload(fileName, file);
+
+      if (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('story-images')
+        .getPublicUrl(fileName);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error("Failed to upload image");
+      return null;
+    }
+  };
+
+  const uploadAudioToStorage = async (blob: Blob): Promise<string | null> => {
+    try {
+      const fileName = `${userId}/audio_${Date.now()}.wav`;
+      
+      const { data, error } = await supabase.storage
+        .from('story-images')
+        .upload(fileName, blob);
+
+      if (error) {
+        console.error('Audio upload error:', error);
+        throw error;
+      }
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('story-images')
+        .getPublicUrl(fileName);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading audio:', error);
+      toast.error("Failed to upload audio");
+      return null;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,22 +101,34 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      // Create object URLs from the actual files
-      const newImages = Array.from(files).map((file) => 
-        URL.createObjectURL(file)
-      );
-      setFormData({ ...formData, images: [...formData.images, ...newImages] });
-      toast.success(`${files.length} image(s) added`);
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const newImageUrls: string[] = [];
+
+    try {
+      for (const file of Array.from(files)) {
+        const url = await uploadImageToStorage(file);
+        if (url) {
+          newImageUrls.push(url);
+        }
+      }
+
+      if (newImageUrls.length > 0) {
+        setFormData({ ...formData, images: [...formData.images, ...newImageUrls] });
+        toast.success(`${newImageUrls.length} image(s) uploaded successfully`);
+      }
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      toast.error("Failed to upload some images");
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const removeImage = (index: number) => {
-    const imageToRemove = formData.images[index];
-    // Revoke the object URL to free up memory
-    URL.revokeObjectURL(imageToRemove);
     const newImages = formData.images.filter((_, i) => i !== index);
     setFormData({ ...formData, images: newImages });
   };
@@ -72,11 +141,15 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
       
       const chunks: BlobPart[] = [];
       mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(chunks, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(blob);
-        setFormData({ ...formData, audio_url: audioUrl });
-        toast.success("Audio recording saved!");
+        
+        // Upload to storage
+        const audioUrl = await uploadAudioToStorage(blob);
+        if (audioUrl) {
+          setFormData({ ...formData, audio_url: audioUrl });
+          toast.success("Audio recording uploaded successfully!");
+        }
       };
       
       mediaRecorder.start();
@@ -96,22 +169,12 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
   };
 
   const removeAudio = () => {
-    if (formData.audio_url) {
-      URL.revokeObjectURL(formData.audio_url);
-    }
     setFormData({ ...formData, audio_url: null });
   };
 
   const handleClose = () => {
     if (isRecording) {
       stopRecording();
-    }
-    // Clean up object URLs when closing
-    formData.images.forEach(imageUrl => {
-      URL.revokeObjectURL(imageUrl);
-    });
-    if (formData.audio_url) {
-      URL.revokeObjectURL(formData.audio_url);
     }
     setFormData({ title: "", content: "", images: [], audio_url: null });
     onClose();
@@ -162,9 +225,10 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
               className="w-full border-dashed border-2 border-amber-300 hover:border-amber-400 hover:bg-amber-50"
+              disabled={isUploading}
             >
               <Camera className="w-4 h-4 mr-2" />
-              Add Photos
+              {isUploading ? "Uploading..." : "Add Photos"}
             </Button>
             <input
               ref={fileInputRef}
@@ -251,7 +315,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory }: CreateStoryModalPr
             <Button 
               type="submit" 
               className="flex-1 bg-amber-600 hover:bg-amber-700"
-              disabled={isLoading}
+              disabled={isLoading || isUploading}
             >
               {isLoading ? "Adding Story..." : "Add Story"}
             </Button>
