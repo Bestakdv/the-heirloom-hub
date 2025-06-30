@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuthSuccess: (user: any) => void;
+  onAuthSuccess: () => void;
 }
 
 const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
@@ -25,12 +25,13 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
     e.preventDefault();
     setIsLoading(true);
     
-    const { error } = await signIn(loginData.email, loginData.password);
+    const { data, error } = await signIn(loginData.email, loginData.password);
     
     if (error) {
       toast.error(error.message);
-    } else {
+    } else if (data?.user) {
       toast.success("Welcome back!");
+      onAuthSuccess();
       onClose();
     }
     
@@ -41,13 +42,20 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
     e.preventDefault();
     setIsLoading(true);
     
-    const { error } = await signUp(signupData.email, signupData.password, signupData.name);
+    const { data, error } = await signUp(signupData.email, signupData.password, signupData.name);
     
     if (error) {
       toast.error(error.message);
-    } else {
-      toast.success("Account created successfully! Please check your email to confirm your account.");
-      onClose();
+    } else if (data?.user) {
+      // Check if user needs email confirmation
+      if (data.user.email_confirmed_at) {
+        toast.success("Account created and logged in successfully!");
+        onAuthSuccess();
+        onClose();
+      } else {
+        toast.success("Account created! Please check your email to confirm your account.");
+        onClose();
+      }
     }
     
     setIsLoading(false);
