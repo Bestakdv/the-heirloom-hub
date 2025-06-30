@@ -16,22 +16,7 @@ const Dashboard = ({ user }: DashboardProps) => {
   const { signOut } = useAuth();
   const [isCreateVaultModalOpen, setIsCreateVaultModalOpen] = useState(false);
   const [selectedVault, setSelectedVault] = useState(null);
-  const [vaults, setVaults] = useState([
-    {
-      id: "1",
-      name: "Smith Family Memories",
-      description: "Stories from our family lineage dating back to the 1920s",
-      storyCount: 12,
-      createdAt: "2024-01-15",
-    },
-    {
-      id: "2", 
-      name: "Grandma Rose's Tales",
-      description: "Precious stories and wisdom from Grandma Rose",
-      storyCount: 8,
-      createdAt: "2024-02-01",
-    }
-  ]);
+  const [vaults, setVaults] = useState([]); // Start with empty array
 
   const handleCreateVault = (vaultData: any) => {
     const newVault = {
