@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,27 +11,23 @@ interface VaultViewProps {
   vault: any;
   onBack: () => void;
   user: any;
+  stories: any[];
+  onAddStory: (storyData: any) => void;
+  onDeleteStory: (storyId: string) => void;
 }
 
-const VaultView = ({ vault, onBack, user }: VaultViewProps) => {
+const VaultView = ({ vault, onBack, user, stories, onAddStory, onDeleteStory }: VaultViewProps) => {
   const [isCreateStoryModalOpen, setIsCreateStoryModalOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState(null);
-  const [stories, setStories] = useState([]);
 
   const handleCreateStory = (storyData: any) => {
-    const newStory = {
-      id: Date.now().toString(),
-      ...storyData,
-      createdAt: new Date().toISOString().split('T')[0],
-      author: user.name
-    };
-    setStories([newStory, ...stories]);
+    onAddStory(storyData);
     setIsCreateStoryModalOpen(false);
     toast.success("Story added successfully!");
   };
 
   const handleDeleteStory = (storyId: string) => {
-    setStories(stories.filter(story => story.id !== storyId));
+    onDeleteStory(storyId);
     toast.success("Story deleted successfully!");
   };
 

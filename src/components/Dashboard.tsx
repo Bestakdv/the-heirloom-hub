@@ -16,7 +16,8 @@ const Dashboard = ({ user }: DashboardProps) => {
   const { signOut } = useAuth();
   const [isCreateVaultModalOpen, setIsCreateVaultModalOpen] = useState(false);
   const [selectedVault, setSelectedVault] = useState(null);
-  const [vaults, setVaults] = useState([]); // Start with empty array
+  const [vaults, setVaults] = useState([]);
+  const [vaultStories, setVaultStories] = useState<Record<string, any[]>>({});
 
   const handleCreateVault = (vaultData: any) => {
     const newVault = {
@@ -26,14 +27,57 @@ const Dashboard = ({ user }: DashboardProps) => {
       createdAt: new Date().toISOString().split('T')[0],
     };
     setVaults([...vaults, newVault]);
+    setVaultStories({ ...vaultStories, [newVault.id]: [] });
     setIsCreateVaultModalOpen(false);
   };
 
   const handleDeleteVault = (vaultId: string) => {
     setVaults(vaults.filter(vault => vault.id !== vaultId));
+    const updatedStories = { ...vaultStories };
+    delete updatedStories[vaultId];
+    setVaultStories(updatedStories);
     if (selectedVault && selectedVault.id === vaultId) {
       setSelectedVault(null);
     }
+  };
+
+  const handleAddStory = (vaultId: string, storyData: any) => {
+    const newStory = {
+      id: Date.now().toString(),
+      ...storyData,
+      createdAt: new Date().toISOString().split('T')[0],
+      author: user.user_metadata?.full_name || user.email
+    };
+    
+    const currentStories = vaultStories[vaultId] || [];
+    setVaultStories({
+      ...vaultStories,
+      [vaultId]: [newStory, ...currentStories]
+    });
+
+    // Update vault story count
+    setVaults(vaults.map(vault => 
+      vault.id === vaultId 
+        ? { ...vault, storyCount: (currentStories.length + 1) }
+        : vault
+    ));
+  };
+
+  const handleDeleteStory = (vaultId: string, storyId: string) => {
+    const currentStories = vaultStories[vaultId] || [];
+    const updatedStories = currentStories.filter(story => story.id !== storyId);
+    
+    setVaultStories({
+      ...vaultStories,
+      [vaultId]: updatedStories
+    });
+
+    // Update vault story count
+    setVaults(vaults.map(vault => 
+      vault.id === vaultId 
+        ? { ...vault, storyCount: updatedStories.length }
+        : vault
+    ));
   };
 
   const handleLogout = async () => {
@@ -51,6 +95,9 @@ const Dashboard = ({ user }: DashboardProps) => {
         vault={selectedVault} 
         onBack={() => setSelectedVault(null)}
         user={user}
+        stories={vaultStories[selectedVault.id] || []}
+        onAddStory={(storyData) => handleAddStory(selectedVault.id, storyData)}
+        onDeleteStory={(storyId) => handleDeleteStory(selectedVault.id, storyId)}
       />
     );
   }
