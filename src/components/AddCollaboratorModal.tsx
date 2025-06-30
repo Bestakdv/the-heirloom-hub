@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserPlus, Mail, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AddCollaboratorModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface AddCollaboratorModalProps {
 }
 
 const AddCollaboratorModal = ({ isOpen, onClose, vaultId, vaultName, onCollaboratorAdded }: AddCollaboratorModalProps) => {
+  const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [permission, setPermission] = useState<"view_only" | "view_and_add">("view_only");
   const [isLoading, setIsLoading] = useState(false);
@@ -27,29 +29,28 @@ const AddCollaboratorModal = ({ isOpen, onClose, vaultId, vaultName, onCollabora
     setIsLoading(true);
 
     try {
-      // First, check if user exists and get their ID
-      const { data: userData, error: userError } = await supabase
+      // First, find the user by email in the profiles table
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id')
-        .eq('id', email) // This won't work directly - we need to find user by email
+        .eq('id', email) // For now, we'll use ID directly - in a real app you'd search by email
         .single();
 
-      // Since we can't directly query auth.users, we'll try to invite by email
-      // For now, let's assume the email is the user ID format or we have a different approach
-      
-      // In a real implementation, you might want to:
-      // 1. Have users enter a username/ID instead of email
-      // 2. Or implement a user search function
-      // 3. Or send invitations via email
+      if (profileError) {
+        toast.error("User not found. Please check the user ID.");
+        setIsLoading(false);
+        return;
+      }
 
-      // For this demo, let's create a simplified version that assumes email format
+      // Add collaborator with the current user as the inviter
       const { data, error } = await supabase
         .from('vault_collaborators')
-        .insert([{
+        .insert({
           vault_id: vaultId,
-          user_id: email, // This would need to be the actual user UUID
+          user_id: profileData.id,
+          invited_by: user?.id || '',
           permission: permission
-        }])
+        })
         .select()
         .single();
 
@@ -66,7 +67,7 @@ const AddCollaboratorModal = ({ isOpen, onClose, vaultId, vaultName, onCollabora
       }
     } catch (error) {
       console.error('Error adding collaborator:', error);
-      toast.error("Failed to add collaborator. Please check the email address.");
+      toast.error("Failed to add collaborator. Please check the user ID.");
     } finally {
       setIsLoading(false);
     }
@@ -93,13 +94,13 @@ const AddCollaboratorModal = ({ isOpen, onClose, vaultId, vaultName, onCollabora
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="collaborator-email">Email Address</Label>
+            <Label htmlFor="collaborator-email">User ID</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 id="collaborator-email"
-                type="email"
-                placeholder="Enter collaborator's email"
+                type="text"
+                placeholder="Enter user ID"
                 className="pl-10"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

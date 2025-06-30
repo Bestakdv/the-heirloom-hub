@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Users, UserMinus, Eye, Edit, Crown } from "lucide-react";
+import { Users, UserMinus, Eye, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,8 +13,8 @@ interface Collaborator {
   user_id: string;
   permission: "view_only" | "view_and_add";
   created_at: string;
-  profiles?: {
-    full_name: string;
+  user_profile?: {
+    full_name: string | null;
   };
 }
 
@@ -34,19 +34,32 @@ const CollaboratorsList = ({ vaultId, isOwner, onCollaboratorRemoved }: Collabor
 
   const fetchCollaborators = async () => {
     try {
-      const { data, error } = await supabase
+      // First get collaborators
+      const { data: collaboratorData, error: collaboratorError } = await supabase
         .from('vault_collaborators')
-        .select(`
-          *,
-          profiles:user_id (
-            full_name
-          )
-        `)
+        .select('*')
         .eq('vault_id', vaultId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setCollaborators(data || []);
+      if (collaboratorError) throw collaboratorError;
+
+      // Then get profile information for each collaborator
+      const collaboratorsWithProfiles = await Promise.all(
+        (collaboratorData || []).map(async (collaborator) => {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', collaborator.user_id)
+            .single();
+
+          return {
+            ...collaborator,
+            user_profile: profileError ? null : profile
+          };
+        })
+      );
+
+      setCollaborators(collaboratorsWithProfiles);
     } catch (error) {
       console.error('Error fetching collaborators:', error);
       toast.error("Failed to load collaborators");
@@ -117,7 +130,7 @@ const CollaboratorsList = ({ vaultId, isOwner, onCollaboratorRemoved }: Collabor
                   </div>
                   <div>
                     <div className="font-medium text-amber-900">
-                      {collaborator.profiles?.full_name || "Unknown User"}
+                      {collaborator.user_profile?.full_name || "Unknown User"}
                     </div>
                     <div className="text-sm text-amber-600">
                       Added {new Date(collaborator.created_at).toLocaleDateString()}
