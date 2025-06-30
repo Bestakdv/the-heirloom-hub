@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +54,7 @@ const Index = () => {
             Create a digital sanctuary for your family's memories. Share stories, photos, and voices 
             across generations in beautiful, private family vaults.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex justify-center">
             <Button 
               size="lg" 
               onClick={() => setIsAuthModalOpen(true)}
@@ -63,13 +62,6 @@ const Index = () => {
             >
               Start Your Family's Story
               <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="border-amber-600 text-amber-700 hover:bg-amber-50 px-8 py-4 text-lg"
-            >
-              Watch Demo
             </Button>
           </div>
         </div>
