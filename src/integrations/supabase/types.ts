@@ -153,7 +153,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_has_vault_access: {
+        Args: { vault_id_param: string }
+        Returns: boolean
+      }
     }
     Enums: {
       collaboration_permission: "view_only" | "view_and_add"
