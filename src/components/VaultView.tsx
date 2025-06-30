@@ -1,11 +1,12 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Plus, Calendar, Camera, Mic, FileText, Trash2, Bot } from "lucide-react";
+import { ArrowLeft, Plus, Calendar, Camera, Mic, FileText, Trash2, Bot, Users, UserPlus } from "lucide-react";
 import CreateStoryModal from "./CreateStoryModal";
 import StoryDetailModal from "./StoryDetailModal";
 import AIChatBot from "./AIChatBot";
+import AddCollaboratorModal from "./AddCollaboratorModal";
+import CollaboratorsList from "./CollaboratorsList";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,10 +19,41 @@ interface VaultViewProps {
 
 const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
   const [isCreateStoryModalOpen, setIsCreateStoryModalOpen] = useState(false);
+  const [isAddCollaboratorModalOpen, setIsAddCollaboratorModalOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState(null);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [showCollaborators, setShowCollaborators] = useState(false);
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [canAddStories, setCanAddStories] = useState(true);
+
+  // Check user permissions
+  useEffect(() => {
+    checkPermissions();
+  }, [vault, user]);
+
+  const checkPermissions = async () => {
+    if (vault.isOwner) {
+      setCanAddStories(true);
+      return;
+    }
+
+    // Check if user has view_and_add permission
+    try {
+      const { data, error } = await supabase
+        .from('vault_collaborators')
+        .select('permission')
+        .eq('vault_id', vault.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      setCanAddStories(data.permission === 'view_and_add');
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      setCanAddStories(false);
+    }
+  };
 
   // Fetch stories from Supabase
   useEffect(() => {
@@ -36,7 +68,6 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
         .from('stories')
         .select('*')
         .eq('vault_id', vault.id)
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -122,6 +153,24 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
             </div>
             <div className="flex gap-2">
               <Button 
+                onClick={() => setShowCollaborators(!showCollaborators)}
+                variant="outline"
+                className="border-amber-600 text-amber-700 hover:bg-amber-50"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Collaborators
+              </Button>
+              {vault.isOwner && (
+                <Button 
+                  onClick={() => setIsAddCollaboratorModalOpen(true)}
+                  variant="outline"
+                  className="border-amber-600 text-amber-700 hover:bg-amber-50"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Collaborator
+                </Button>
+              )}
+              <Button 
                 onClick={() => setShowAIChat(!showAIChat)}
                 variant="outline"
                 className="border-amber-600 text-amber-700 hover:bg-amber-50"
@@ -129,13 +178,15 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
                 <Bot className="w-4 h-4 mr-2" />
                 AI Assistant
               </Button>
-              <Button 
-                onClick={() => setIsCreateStoryModalOpen(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Story
-              </Button>
+              {canAddStories && (
+                <Button 
+                  onClick={() => setIsCreateStoryModalOpen(true)}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Story
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -145,7 +196,17 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
       <main className="container mx-auto px-6 py-8 max-w-6xl">
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Stories Section */}
-          <div className={`${showAIChat ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-6`}>
+          <div className={`${showAIChat || showCollaborators ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-6`}>
+            {/* Show collaborators list when toggled */}
+            {showCollaborators && (
+              <CollaboratorsList 
+                vaultId={vault.id}
+                isOwner={vault.isOwner}
+                onCollaboratorRemoved={onVaultUpdate}
+              />
+            )}
+
+            {/* Stories list */}
             {stories.length === 0 ? (
               <Card className="text-center py-12 bg-white border-amber-200">
                 <CardContent>
@@ -154,13 +215,15 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
                   <p className="text-amber-700 mb-6">
                     Start preserving your family memories by adding your first story.
                   </p>
-                  <Button 
-                    onClick={() => setIsCreateStoryModalOpen(true)}
-                    className="bg-amber-600 hover:bg-amber-700 text-white"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Your First Story
-                  </Button>
+                  {canAddStories && (
+                    <Button 
+                      onClick={() => setIsCreateStoryModalOpen(true)}
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Your First Story
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ) : (
@@ -188,17 +251,19 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
                               {story.content}
                             </CardDescription>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteStory(story.id);
-                            }}
-                            className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {(vault.isOwner || story.user_id === user.id) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteStory(story.id);
+                              }}
+                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -246,11 +311,21 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
         </div>
       </main>
 
-      <CreateStoryModal 
-        isOpen={isCreateStoryModalOpen}
-        onClose={() => setIsCreateStoryModalOpen(false)}
-        onCreateStory={handleCreateStory}
-        userId={user.id}
+      {canAddStories && (
+        <CreateStoryModal 
+          isOpen={isCreateStoryModalOpen}
+          onClose={() => setIsCreateStoryModalOpen(false)}
+          onCreateStory={handleCreateStory}
+          userId={user.id}
+        />
+      )}
+
+      <AddCollaboratorModal 
+        isOpen={isAddCollaboratorModalOpen}
+        onClose={() => setIsAddCollaboratorModalOpen(false)}
+        vaultId={vault.id}
+        vaultName={vault.name}
+        onCollaboratorAdded={onVaultUpdate}
       />
 
       {selectedStory && (
