@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Mail, Lock, User } from "lucide-react";
+import { BookOpen, Mail, Lock, User, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -23,15 +22,32 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
   const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState("");
 
+  const validatePassword = (password: string) => {
+    const validations = {
+      minLength: password.length >= 8,
+      hasLowercase: /[a-z]/.test(password),
+      hasUppercase: /[A-Z]/.test(password),
+      hasDigit: /\d/.test(password),
+      hasSymbol: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    };
+    
+    return validations;
+  };
+
+  const isPasswordValid = (password: string) => {
+    const validations = validatePassword(password);
+    return Object.values(validations).every(Boolean);
+  };
+
   const getPasswordErrorMessage = (error: string) => {
     if (error.toLowerCase().includes("password") && error.toLowerCase().includes("short")) {
-      return "Password must be at least 6 characters long.";
+      return "Password must be at least 8 characters long.";
     }
     if (error.toLowerCase().includes("password") && error.toLowerCase().includes("weak")) {
       return "Password is too weak. Please use a stronger password with a mix of letters, numbers, and symbols.";
     }
     if (error.toLowerCase().includes("password") && (error.toLowerCase().includes("format") || error.toLowerCase().includes("invalid"))) {
-      return "Password format is invalid. Please use at least 6 characters.";
+      return "Password format is invalid. Please use at least 8 characters.";
     }
     if (error.toLowerCase().includes("signup") && error.toLowerCase().includes("disabled")) {
       return "Account creation is currently disabled. Please contact support.";
@@ -73,6 +89,13 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side password validation
+    if (!isPasswordValid(signupData.password)) {
+      toast.error("Please ensure your password meets all requirements.");
+      return;
+    }
+    
     setIsLoading(true);
     
     const { data, error } = await signUp(signupData.email, signupData.password, signupData.name);
@@ -108,6 +131,8 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
     
     setIsLoading(false);
   };
+
+  const passwordValidations = validatePassword(signupData.password);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -236,21 +261,44 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="At least 6 characters"
+                      placeholder="Create a strong password"
                       className="pl-10"
                       value={signupData.password}
                       onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                       required
                     />
                   </div>
-                  <p className="text-xs text-amber-600">
-                    Password must be at least 6 characters long
-                  </p>
+                  
+                  {/* Password requirements checklist */}
+                  {signupData.password && (
+                    <div className="space-y-1 text-xs">
+                      <div className={`flex items-center gap-2 ${passwordValidations.minLength ? 'text-green-600' : 'text-red-500'}`}>
+                        {passwordValidations.minLength ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                        At least 8 characters
+                      </div>
+                      <div className={`flex items-center gap-2 ${passwordValidations.hasLowercase ? 'text-green-600' : 'text-red-500'}`}>
+                        {passwordValidations.hasLowercase ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                        One lowercase letter
+                      </div>
+                      <div className={`flex items-center gap-2 ${passwordValidations.hasUppercase ? 'text-green-600' : 'text-red-500'}`}>
+                        {passwordValidations.hasUppercase ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                        One uppercase letter
+                      </div>
+                      <div className={`flex items-center gap-2 ${passwordValidations.hasDigit ? 'text-green-600' : 'text-red-500'}`}>
+                        {passwordValidations.hasDigit ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                        One digit
+                      </div>
+                      <div className={`flex items-center gap-2 ${passwordValidations.hasSymbol ? 'text-green-600' : 'text-red-500'}`}>
+                        {passwordValidations.hasSymbol ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                        One symbol (!@#$%^&*)
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <Button 
                   type="submit" 
                   className="w-full bg-amber-600 hover:bg-amber-700"
-                  disabled={isLoading}
+                  disabled={isLoading || !isPasswordValid(signupData.password)}
                 >
                   {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
