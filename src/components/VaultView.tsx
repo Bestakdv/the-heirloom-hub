@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -169,7 +168,11 @@ const VaultView = ({ vault, onBack, user, stories, onAddStory, onDeleteStory }: 
           {/* AI Chat Section */}
           {showAIChat && (
             <div className="lg:col-span-1">
-              <AIChatBot vaultName={vault.name} />
+              <AIChatBot 
+                vaultName={vault.name} 
+                vaultId={vault.id}
+                userId={user.id}
+              />
             </div>
           )}
         </div>

@@ -16,14 +16,16 @@ interface Message {
 
 interface AIChatBotProps {
   vaultName: string;
+  vaultId: string;
+  userId: string;
 }
 
-const AIChatBot = ({ vaultName }: AIChatBotProps) => {
+const AIChatBot = ({ vaultName, vaultId, userId }: AIChatBotProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: `Hello! I'm your AI assistant for "${vaultName}". I can help you with story ideas, memory prompts, and organizing your family history. What would you like to explore today?`,
+      content: `Hello! I'm your AI assistant for "${vaultName}". I can help you with story ideas, memory prompts, organizing your family history, and answer questions about the stories in your vault. What would you like to explore today?`,
       timestamp: new Date()
     }
   ]);
@@ -57,7 +59,11 @@ const AIChatBot = ({ vaultName }: AIChatBotProps) => {
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
           message: inputMessage,
-          context: { vaultName }
+          context: { 
+            vaultName,
+            vaultId 
+          },
+          userId
         }
       });
 
@@ -154,7 +160,7 @@ const AIChatBot = ({ vaultName }: AIChatBotProps) => {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask for story ideas, memory prompts, or family history help..."
+              placeholder="Ask about your stories, get writing prompts, or family history help..."
               disabled={isLoading}
               className="flex-1"
             />

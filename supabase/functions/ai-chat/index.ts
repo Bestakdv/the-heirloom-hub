@@ -1,8 +1,13 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const togetherApiKey = Deno.env.get('TOGETHER_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,17 +20,35 @@ serve(async (req) => {
   }
 
   try {
-    const { message, context } = await req.json();
+    const { message, context, userId } = await req.json();
+    
+    // Fetch stories from the vault for context
+    let storiesContext = "";
+    if (context?.vaultId && userId) {
+      const { data: stories, error } = await supabase
+        .from('stories')
+        .select('title, content, author, created_at')
+        .eq('vault_id', context.vaultId)
+        .eq('user_id', userId);
+      
+      if (!error && stories && stories.length > 0) {
+        storiesContext = `\n\nHere are the stories currently in the "${context.vaultName}" family vault:\n` +
+        stories.map(story => 
+          `Title: "${story.title}"\nAuthor: ${story.author}\nDate: ${new Date(story.created_at).toLocaleDateString()}\nContent: ${story.content.substring(0, 500)}${story.content.length > 500 ? '...' : ''}\n`
+        ).join('\n---\n');
+      }
+    }
 
     const systemPrompt = `You are a helpful AI assistant specialized in family history and storytelling. You help families preserve their memories by:
     - Suggesting story ideas and memory prompts
     - Helping organize family history information
     - Providing creative writing assistance for family stories
     - Offering guidance on preserving family memories
+    - Answering questions about existing stories in their vault
     
     Keep your responses warm, encouraging, and family-focused. Be concise but helpful.
     
-    Context: The user is working with their family vault "${context?.vaultName || 'family memories'}".`;
+    Context: The user is working with their family vault "${context?.vaultName || 'family memories'}".${storiesContext}`;
 
     const response = await fetch('https://api.together.xyz/v1/chat/completions', {
       method: 'POST',
