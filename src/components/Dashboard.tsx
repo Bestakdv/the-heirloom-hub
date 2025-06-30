@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,11 +29,10 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const fetchVaults = async () => {
     try {
-      // The RLS policies will automatically filter to show only vaults the user can access
-      // (both owned vaults and collaborated vaults)
       const { data, error } = await supabase
         .from('vaults')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
