@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
@@ -56,13 +56,13 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
     }
   };
 
-  const uploadAudioToStorage = async (blob: Blob): Promise<string | null> => {
+  const uploadAudioToStorage = async (file: File | Blob, isRecording = false): Promise<string | null> => {
     try {
-      const fileName = `${userId}/audio_${Date.now()}.wav`;
+      const fileName = `${userId}/audio_${Date.now()}.${isRecording ? 'wav' : file.name?.split('.').pop() || 'mp3'}`;
       
       const { data, error } = await supabase.storage
         .from('story-images')
-        .upload(fileName, blob);
+        .upload(fileName, file);
 
       if (error) {
         console.error('Audio upload error:', error);
@@ -133,6 +133,35 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
     setFormData({ ...formData, images: newImages });
   };
 
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if it's an audio file
+    if (!file.type.startsWith('audio/')) {
+      toast.error("Please select an audio file");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const audioUrl = await uploadAudioToStorage(file);
+      if (audioUrl) {
+        setFormData({ ...formData, audio_url: audioUrl });
+        toast.success("Audio file uploaded successfully!");
+      }
+    } catch (error) {
+      console.error('Error uploading audio file:', error);
+      toast.error("Failed to upload audio file");
+    } finally {
+      setIsUploading(false);
+      // Reset the input
+      if (audioInputRef.current) {
+        audioInputRef.current.value = '';
+      }
+    }
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -145,7 +174,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
         const blob = new Blob(chunks, { type: 'audio/wav' });
         
         // Upload to storage
-        const audioUrl = await uploadAudioToStorage(blob);
+        const audioUrl = await uploadAudioToStorage(blob, true);
         if (audioUrl) {
           setFormData({ ...formData, audio_url: audioUrl });
           toast.success("Audio recording uploaded successfully!");
@@ -263,28 +292,51 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
             )}
           </div>
 
-          {/* Audio Recording Section */}
+          {/* Audio Recording/Upload Section */}
           <div className="space-y-3">
             <Label>Audio Recording</Label>
             {!formData.audio_url ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={isRecording ? stopRecording : startRecording}
-                className={`w-full ${isRecording ? 'border-red-300 text-red-600 hover:bg-red-50' : 'border-amber-300 hover:border-amber-400 hover:bg-amber-50'}`}
-              >
-                {isRecording ? (
-                  <>
-                    <Square className="w-4 h-4 mr-2" />
-                    Stop Recording
-                  </>
-                ) : (
-                  <>
-                    <Mic className="w-4 h-4 mr-2" />
-                    Start Recording
-                  </>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  className={`w-full ${isRecording ? 'border-red-300 text-red-600 hover:bg-red-50' : 'border-amber-300 hover:border-amber-400 hover:bg-amber-50'}`}
+                >
+                  {isRecording ? (
+                    <>
+                      <Square className="w-4 h-4 mr-2" />
+                      Stop Recording
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-4 h-4 mr-2" />
+                      Start Recording
+                    </>
+                  )}
+                </Button>
+                
+                <div className="text-center text-amber-600 text-sm">or</div>
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => audioInputRef.current?.click()}
+                  className="w-full border-amber-300 hover:border-amber-400 hover:bg-amber-50"
+                  disabled={isUploading}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {isUploading ? "Uploading..." : "Upload Audio File"}
+                </Button>
+                
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleAudioUpload}
+                  className="hidden"
+                />
+              </div>
             ) : (
               <div className="flex items-center gap-2 p-3 bg-amber-50 rounded border border-amber-200">
                 <audio controls className="flex-1">
