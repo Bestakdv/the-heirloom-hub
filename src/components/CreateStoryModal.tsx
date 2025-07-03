@@ -58,7 +58,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
 
   const uploadAudioToStorage = async (file: File | Blob, isRecording = false): Promise<string | null> => {
     try {
-      const fileName = `${userId}/audio_${Date.now()}.${isRecording ? 'wav' : file.name?.split('.').pop() || 'mp3'}`;
+      const fileName = `${userId}/audio_${Date.now()}.${isRecording ? 'wav' : (file instanceof File ? file.name?.split('.').pop() : 'mp3') || 'mp3'}`;
       
       const { data, error } = await supabase.storage
         .from('story-images')
