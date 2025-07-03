@@ -10,6 +10,22 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { UserPlus, Mail, Trash2, Eye, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+
+type CollaborationPermission = Database['public']['Enums']['collaboration_permission'];
+
+interface Collaborator {
+  id: string;
+  vault_id: string;
+  user_id: string;
+  permission: CollaborationPermission;
+  invited_by: string;
+  invited_at: string;
+  profiles?: {
+    id: string;
+    full_name: string | null;
+  };
+}
 
 interface VaultCollaboratorsProps {
   vault: any;
@@ -18,10 +34,10 @@ interface VaultCollaboratorsProps {
 }
 
 const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) => {
-  const [collaborators, setCollaborators] = useState([]);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [invitePermission, setInvitePermission] = useState("view_only");
+  const [invitePermission, setInvitePermission] = useState<CollaborationPermission>("view_only");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -44,7 +60,7 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
         .eq('vault_id', vault.id);
 
       if (error) throw error;
-      setCollaborators(data || []);
+      setCollaborators(data as Collaborator[] || []);
     } catch (error) {
       console.error('Error fetching collaborators:', error);
       toast.error("Failed to load collaborators");
@@ -99,7 +115,7 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
     }
   };
 
-  const handleUpdatePermission = async (collaboratorId: string, newPermission: string) => {
+  const handleUpdatePermission = async (collaboratorId: string, newPermission: CollaborationPermission) => {
     try {
       const { error } = await supabase
         .from('vault_collaborators')
@@ -161,7 +177,7 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
                   </div>
                   <div>
                     <Label htmlFor="permission">Permission</Label>
-                    <Select value={invitePermission} onValueChange={setInvitePermission}>
+                    <Select value={invitePermission} onValueChange={(value: CollaborationPermission) => setInvitePermission(value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -230,7 +246,7 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
                   <div className="flex items-center gap-2">
                     <Select
                       value={collaborator.permission}
-                      onValueChange={(value) => handleUpdatePermission(collaborator.id, value)}
+                      onValueChange={(value: CollaborationPermission) => handleUpdatePermission(collaborator.id, value)}
                     >
                       <SelectTrigger className="w-[140px]">
                         <SelectValue />
