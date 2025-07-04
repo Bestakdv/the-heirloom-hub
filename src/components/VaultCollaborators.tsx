@@ -24,7 +24,7 @@ interface Collaborator {
   profiles?: {
     id: string;
     full_name: string | null;
-  };
+  } | null;
 }
 
 interface VaultCollaboratorsProps {
@@ -60,7 +60,7 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
         .eq('vault_id', vault.id);
 
       if (error) throw error;
-      setCollaborators(data as Collaborator[] || []);
+      setCollaborators((data || []) as Collaborator[]);
     } catch (error) {
       console.error('Error fetching collaborators:', error);
       toast.error("Failed to load collaborators");
