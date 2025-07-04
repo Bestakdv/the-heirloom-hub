@@ -21,10 +21,7 @@ interface Collaborator {
   permission: CollaborationPermission;
   invited_by: string;
   invited_at: string;
-  profiles?: {
-    id: string;
-    full_name: string | null;
-  } | null;
+  user_name?: string;
 }
 
 interface VaultCollaboratorsProps {
@@ -48,19 +45,31 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
   const fetchCollaborators = async () => {
     try {
-      const { data, error } = await supabase
+      // First get collaborators
+      const { data: collaboratorData, error: collabError } = await supabase
         .from('vault_collaborators')
-        .select(`
-          *,
-          profiles!vault_collaborators_user_id_fkey (
-            id,
-            full_name
-          )
-        `)
+        .select('*')
         .eq('vault_id', vault.id);
 
-      if (error) throw error;
-      setCollaborators((data || []) as Collaborator[]);
+      if (collabError) throw collabError;
+
+      // Then get profile information for each collaborator
+      const collaboratorsWithNames = await Promise.all(
+        (collaboratorData || []).map(async (collab) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', collab.user_id)
+            .single();
+
+          return {
+            ...collab,
+            user_name: profile?.full_name || 'Unknown User'
+          };
+        })
+      );
+
+      setCollaborators(collaboratorsWithNames);
     } catch (error) {
       console.error('Error fetching collaborators:', error);
       toast.error("Failed to load collaborators");
@@ -225,7 +234,7 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
                   </div>
                   <div>
                     <p className="font-medium text-amber-900">
-                      {collaborator.profiles?.full_name || "User"}
+                      {collaborator.user_name}
                     </p>
                     <p className="text-sm text-amber-600 flex items-center gap-1">
                       {collaborator.permission === 'view_only' ? (
