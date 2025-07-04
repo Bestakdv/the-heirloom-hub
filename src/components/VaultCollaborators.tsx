@@ -33,7 +33,7 @@ interface VaultCollaboratorsProps {
 const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) => {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteUserId, setInviteUserId] = useState("");
   const [invitePermission, setInvitePermission] = useState<CollaborationPermission>("view_only");
   const [loading, setLoading] = useState(false);
 
@@ -78,27 +78,65 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) {
-      toast.error("Please enter an email address");
+    if (!inviteUserId.trim()) {
+      toast.error("Please enter a user ID");
       return;
     }
 
     setLoading(true);
     try {
-      // First, try to find the user by email
-      const { data: userData, error: userError } = await supabase
+      // Check if user exists
+      const { data: existingUser, error: userError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('id', inviteEmail) // This won't work for email lookup
+        .select('id, full_name')
+        .eq('id', inviteUserId.trim())
         .single();
 
-      // For now, we'll create the invitation with email and let the user know
-      // In a real app, you'd want to send an email invitation
-      toast.info("User invitation feature needs email integration. For now, share the vault ID directly with users.");
+      if (userError) {
+        toast.error("User not found. Please check the user ID.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if user is already a collaborator
+      const { data: existingCollab } = await supabase
+        .from('vault_collaborators')
+        .select('id')
+        .eq('vault_id', vault.id)
+        .eq('user_id', inviteUserId.trim())
+        .single();
+
+      if (existingCollab) {
+        toast.error("User is already a collaborator on this vault");
+        setLoading(false);
+        return;
+      }
+
+      // Create the collaboration
+      const { data: newCollab, error: collabError } = await supabase
+        .from('vault_collaborators')
+        .insert([{
+          vault_id: vault.id,
+          user_id: inviteUserId.trim(),
+          permission: invitePermission,
+          invited_by: user.id
+        }])
+        .select()
+        .single();
+
+      if (collabError) throw collabError;
+
+      // Add to local state
+      const newCollaborator = {
+        ...newCollab,
+        user_name: existingUser.full_name || 'Unknown User'
+      };
       
+      setCollaborators([...collaborators, newCollaborator]);
       setIsInviteModalOpen(false);
-      setInviteEmail("");
+      setInviteUserId("");
       setInvitePermission("view_only");
+      toast.success(`Successfully invited ${existingUser.full_name || 'user'} to collaborate!`);
     } catch (error) {
       console.error('Error inviting user:', error);
       toast.error("Failed to invite user");
@@ -169,20 +207,23 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
                 <DialogHeader>
                   <DialogTitle>Invite Collaborator</DialogTitle>
                   <DialogDescription>
-                    Invite someone to collaborate on this vault
+                    Enter the user ID of the person you want to invite to collaborate on this vault
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleInviteUser} className="space-y-4">
                   <div>
-                    <Label htmlFor="email">Email Address</Label>
+                    <Label htmlFor="userId">User ID</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="user@example.com"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
+                      id="userId"
+                      type="text"
+                      placeholder="Enter user ID (UUID format)"
+                      value={inviteUserId}
+                      onChange={(e) => setInviteUserId(e.target.value)}
                       required
                     />
+                    <p className="text-xs text-amber-600 mt-1">
+                      Ask the user to share their user ID from their profile settings
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="permission">Permission</Label>
