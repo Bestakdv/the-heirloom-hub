@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Plus, Calendar, Camera, Mic, FileText, Trash2, Bot, Users } from "lucide-react";
+import { ArrowLeft, Plus, Calendar, Camera, Mic, FileText, Trash2, Bot, Users, Edit } from "lucide-react";
 import CreateStoryModal from "./CreateStoryModal";
 import StoryDetailModal from "./StoryDetailModal";
 import AIChatBot from "./AIChatBot";
@@ -19,6 +19,7 @@ interface VaultViewProps {
 const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
   const [isCreateStoryModalOpen, setIsCreateStoryModalOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState(null);
+  const [editingStory, setEditingStory] = useState(null);
   const [showAIChat, setShowAIChat] = useState(false);
   const [showCollaborators, setShowCollaborators] = useState(false);
   const [stories, setStories] = useState([]);
@@ -102,6 +103,35 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
     } catch (error) {
       console.error('Error creating story:', error);
       toast.error("Failed to add story");
+    }
+  };
+
+  const handleUpdateStory = async (storyData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('stories')
+        .update({
+          title: storyData.title,
+          content: storyData.content,
+          images: storyData.images,
+          audio_url: storyData.audio_url,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingStory.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStories(stories.map(story => 
+        story.id === editingStory.id ? data : story
+      ));
+      setEditingStory(null);
+      onVaultUpdate();
+      toast.success("Story updated successfully!");
+    } catch (error) {
+      console.error('Error updating story:', error);
+      toast.error("Failed to update story");
     }
   };
 
@@ -255,17 +285,30 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
                             </CardDescription>
                           </div>
                           {(isOwner || story.user_id === user.id) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteStory(story.id);
-                              }}
-                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingStory(story);
+                                }}
+                                className="text-amber-600 hover:text-amber-800 hover:bg-amber-50"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteStory(story.id);
+                                }}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </CardHeader>
@@ -320,6 +363,16 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
           onClose={() => setIsCreateStoryModalOpen(false)}
           onCreateStory={handleCreateStory}
           userId={user.id}
+        />
+      )}
+
+      {editingStory && (
+        <CreateStoryModal 
+          isOpen={true}
+          onClose={() => setEditingStory(null)}
+          onCreateStory={handleUpdateStory}
+          userId={user.id}
+          editingStory={editingStory}
         />
       )}
 

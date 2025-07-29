@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,10 @@ interface CreateStoryModalProps {
   onClose: () => void;
   onCreateStory: (storyData: any) => void;
   userId: string;
+  editingStory?: any;
 }
 
-const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStoryModalProps) => {
+const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId, editingStory }: CreateStoryModalProps) => {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -28,6 +29,25 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  // Initialize form data when editing
+  useEffect(() => {
+    if (editingStory) {
+      setFormData({
+        title: editingStory.title || "",
+        content: editingStory.content || "",
+        images: editingStory.images || [],
+        audio_url: editingStory.audio_url || null
+      });
+    } else {
+      setFormData({
+        title: "",
+        content: "",
+        images: [],
+        audio_url: null
+      });
+    }
+  }, [editingStory]);
 
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
     try {
@@ -215,10 +235,15 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
         <DialogHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <FileText className="w-6 h-6 text-amber-600" />
-            <DialogTitle className="text-2xl text-amber-900">Add New Story</DialogTitle>
+            <DialogTitle className="text-2xl text-amber-900">
+              {editingStory ? "Edit Story" : "Add New Story"}
+            </DialogTitle>
           </div>
           <p className="text-amber-700">
-            Share a precious family memory with photos and recordings.
+            {editingStory 
+              ? "Update your family memory with photos and recordings."
+              : "Share a precious family memory with photos and recordings."
+            }
           </p>
         </DialogHeader>
 
@@ -369,7 +394,10 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
               className="flex-1 bg-amber-600 hover:bg-amber-700"
               disabled={isLoading || isUploading}
             >
-              {isLoading ? "Adding Story..." : "Add Story"}
+              {isLoading 
+                ? (editingStory ? "Updating Story..." : "Adding Story...") 
+                : (editingStory ? "Update Story" : "Add Story")
+              }
             </Button>
           </div>
         </form>
