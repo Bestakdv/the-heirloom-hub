@@ -32,7 +32,6 @@ const Dashboard = ({ user }: DashboardProps) => {
       const { data, error } = await supabase
         .from('vaults')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
