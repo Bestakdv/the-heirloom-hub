@@ -124,6 +124,7 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
   };
 
   const canAddStories = isOwner || userPermission === 'view_and_add';
+  console.log('canAddStories calculation:', { isOwner, userPermission, canAddStories });
 
   if (loading) {
     return (
