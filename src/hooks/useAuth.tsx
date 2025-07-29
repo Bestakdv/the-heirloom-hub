@@ -21,12 +21,26 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // No authentication - shows landing page for frontend-only demo
+    // Mock authentication - simulate logged in user
+    const mockUser: User = {
+      id: 'mock-user-123',
+      email: 'demo@example.com',
+      user_metadata: {
+        full_name: 'Demo User'
+      }
+    };
+    
+    const mockSession: Session = {
+      user: mockUser,
+      access_token: 'mock-token'
+    };
+
+    // Simulate loading delay
     setTimeout(() => {
-      setUser(null);
-      setSession(null);
+      setUser(mockUser);
+      setSession(mockSession);
       setLoading(false);
-    }, 500);
+    }, 1000);
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
