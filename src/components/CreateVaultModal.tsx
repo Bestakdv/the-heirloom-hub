@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Users, FileText } from "lucide-react";
+import { vaultSchema } from "@/lib/validation";
+import { z } from "zod";
+import { toast } from "sonner";
 
 interface CreateVaultModalProps {
   isOpen: boolean;
@@ -19,16 +22,39 @@ const CreateVaultModal = ({ isOpen, onClose, onCreateVault }: CreateVaultModalPr
     description: ""
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     
+    // Clear previous validation errors
+    setValidationErrors({});
+    
+    // Validate input data
     try {
-      await onCreateVault(formData);
+      const validatedData = vaultSchema.parse({
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+      });
+      
+      setIsLoading(true);
+      
+      await onCreateVault(validatedData);
       setFormData({ name: "", description: "" });
+      setValidationErrors({});
     } catch (error) {
-      console.error('Error in modal:', error);
+      if (error instanceof z.ZodError) {
+        const errors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path.length > 0) {
+            errors[err.path[0] as string] = err.message;
+          }
+        });
+        setValidationErrors(errors);
+        toast.error("Please fix the validation errors");
+      } else {
+        console.error('Error in modal:', error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -36,6 +62,7 @@ const CreateVaultModal = ({ isOpen, onClose, onCreateVault }: CreateVaultModalPr
 
   const handleClose = () => {
     setFormData({ name: "", description: "" });
+    setValidationErrors({});
     onClose();
   };
 
@@ -60,24 +87,33 @@ const CreateVaultModal = ({ isOpen, onClose, onCreateVault }: CreateVaultModalPr
               <Input
                 id="vault-name"
                 type="text"
-                placeholder="e.g., Smith Family Stories"
-                className="pl-10"
+                placeholder="e.g., Smith Family Stories (max 100 characters)"
+                className={`pl-10 ${validationErrors.name ? "border-destructive" : ""}`}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                maxLength={100}
                 required
               />
             </div>
+            {validationErrors.name && (
+              <p className="text-sm text-destructive">{validationErrors.name}</p>
+            )}
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="vault-description">Description (Optional)</Label>
             <Textarea
               id="vault-description"
-              placeholder="Describe what this vault will contain..."
-              className="min-h-[80px]"
+              placeholder="Describe what this vault will contain... (max 500 characters)"
+              className={`min-h-[80px] ${validationErrors.description ? "border-destructive" : ""}`}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              maxLength={500}
             />
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>{validationErrors.description && <span className="text-destructive">{validationErrors.description}</span>}</span>
+              <span>{formData.description.length}/500 characters</span>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">

@@ -7,6 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileText, Camera, Mic, Upload, Play, Square, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { storySchema, sanitizeHtml, validateImageFile, validateImageArray } from "@/lib/validation";
+import { z } from "zod";
+import { checkRateLimit } from "@/lib/rateLimiting";
+import { logRateLimitExceeded, logFileUploadBlocked } from "@/lib/securityLogger";
 
 interface CreateStoryModalProps {
   isOpen: boolean;
@@ -26,6 +30,7 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId, editingStory
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -51,6 +56,14 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId, editingStory
 
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
     try {
+      // Validate file before upload
+      const fileValidation = validateImageFile(file);
+      if (!fileValidation.valid) {
+        logFileUploadBlocked(fileValidation.error!, file.name, userId);
+        toast.error(`${file.name}: ${fileValidation.error}`);
+        return null;
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/${Date.now()}.${fileExt}`;
       
@@ -104,18 +117,60 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId, editingStory
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title.trim()) {
-      toast.error("Please enter a story title");
+    
+    // Check rate limit
+    const rateLimitCheck = checkRateLimit('STORY_CREATE', userId);
+    if (!rateLimitCheck.allowed) {
+      toast.error(rateLimitCheck.message);
+      logRateLimitExceeded('STORY_CREATE', userId);
       return;
     }
     
-    setIsLoading(true);
+    // Clear previous validation errors
+    setValidationErrors({});
     
+    // Validate input data
     try {
-      await onCreateStory(formData);
+      const validatedData = storySchema.parse({
+        title: formData.title.trim(),
+        content: formData.content.trim(),
+        author: "Story Author", // Default author for stories
+      });
+      
+      // Validate images array
+      const imageValidation = validateImageArray(formData.images);
+      if (!imageValidation.valid) {
+        toast.error(imageValidation.error);
+        return;
+      }
+      
+      // Sanitize content
+      const sanitizedContent = sanitizeHtml(validatedData.content);
+      
+      setIsLoading(true);
+      
+      const storyData = {
+        ...formData,
+        title: validatedData.title,
+        content: sanitizedContent
+      };
+      
+      await onCreateStory(storyData);
       setFormData({ title: "", content: "", images: [], audio_url: null });
+      setValidationErrors({});
     } catch (error) {
-      console.error('Error in modal:', error);
+      if (error instanceof z.ZodError) {
+        const errors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path.length > 0) {
+            errors[err.path[0] as string] = err.message;
+          }
+        });
+        setValidationErrors(errors);
+        toast.error("Please fix the validation errors");
+      } else {
+        console.error('Error in modal:', error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -124,6 +179,20 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId, editingStory
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+
+    // Check rate limit
+    const rateLimitCheck = checkRateLimit('IMAGE_UPLOAD', userId);
+    if (!rateLimitCheck.allowed) {
+      toast.error(rateLimitCheck.message);
+      logRateLimitExceeded('IMAGE_UPLOAD', userId);
+      return;
+    }
+
+    // Validate file count
+    if (formData.images.length + files.length > 10) {
+      toast.error("Maximum 10 images allowed per story");
+      return;
+    }
 
     setIsUploading(true);
     const newImageUrls: string[] = [];
@@ -253,22 +322,32 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId, editingStory
             <Input
               id="story-title"
               type="text"
-              placeholder="e.g., Grandpa's 90th Birthday"
+              placeholder="e.g., Grandpa's 90th Birthday (max 200 characters)"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              maxLength={200}
               required
+              className={validationErrors.title ? "border-destructive" : ""}
             />
+            {validationErrors.title && (
+              <p className="text-sm text-destructive">{validationErrors.title}</p>
+            )}
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="story-content">Story Content</Label>
             <Textarea
               id="story-content"
-              placeholder="Tell your story here..."
-              className="min-h-[120px]"
+              placeholder="Tell your story here... (max 100,000 characters)"
+              className={`min-h-[120px] ${validationErrors.content ? "border-destructive" : ""}`}
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              maxLength={100000}
             />
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>{validationErrors.content && <span className="text-destructive">{validationErrors.content}</span>}</span>
+              <span>{formData.content.length.toLocaleString()}/100,000 characters</span>
+            </div>
           </div>
 
           {/* Image Upload Section */}
@@ -287,11 +366,14 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId, editingStory
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
               multiple
               onChange={handleImageUpload}
               className="hidden"
             />
+            <p className="text-sm text-muted-foreground">
+              Max 10 images, 5MB each. Supports JPEG, PNG, GIF, WebP. ({formData.images.length}/10)
+            </p>
             
             {formData.images.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
