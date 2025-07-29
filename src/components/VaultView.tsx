@@ -7,7 +7,6 @@ import StoryDetailModal from "./StoryDetailModal";
 import AIChatBot from "./AIChatBot";
 import VaultCollaborators from "./VaultCollaborators";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface VaultViewProps {
   vault: any;
@@ -27,7 +26,7 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const isOwner = vault?.user_id === user?.id;
 
-  // Fetch stories from Supabase
+  // Mock data for stories
   useEffect(() => {
     if (vault?.id && user?.id) {
       fetchStories();
@@ -41,31 +40,39 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
       return;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('vault_collaborators')
-        .select('permission')
-        .eq('vault_id', vault.id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      setUserPermission(data?.permission || null);
-    } catch (error) {
-      console.error('Error checking user permission:', error);
-    }
+    // Mock permission - for demo purposes, set as viewer
+    setUserPermission('view_only');
   };
 
   const fetchStories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('stories')
-        .select('*')
-        .eq('vault_id', vault.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setStories(data || []);
+      // Mock stories data
+      const mockStories = [
+        {
+          id: '1',
+          title: 'Family Christmas 2023',
+          content: 'What a wonderful Christmas we had this year! The whole family gathered at grandma\'s house...',
+          images: ['https://images.unsplash.com/photo-1545558014-8692077e9b5c?w=400'],
+          audio_url: null,
+          author: 'John Smith',
+          user_id: user.id,
+          vault_id: vault.id,
+          created_at: '2024-01-15'
+        },
+        {
+          id: '2',
+          title: 'Grandpa\'s War Stories',
+          content: 'Grandpa told us amazing stories about his time in the service...',
+          images: [],
+          audio_url: 'https://example.com/audio.mp3',
+          author: 'Mary Johnson',
+          user_id: 'other-user-id',
+          vault_id: vault.id,
+          created_at: '2024-01-10'
+        }
+      ];
+      
+      setStories(mockStories);
     } catch (error) {
       console.error('Error fetching stories:', error);
       toast.error("Failed to load stories");
@@ -76,20 +83,17 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const handleCreateStory = async (storyData: any) => {
     try {
-      const { data, error } = await supabase
-        .from('stories')
-        .insert([{
-          ...storyData,
-          vault_id: vault.id,
-          user_id: user.id,
-          author: user.user_metadata?.full_name || user.email
-        }])
-        .select()
-        .single();
+      // Mock story creation
+      const newStory = {
+        id: Date.now().toString(),
+        ...storyData,
+        vault_id: vault.id,
+        user_id: user.id,
+        author: user.user_metadata?.full_name || user.email,
+        created_at: new Date().toISOString()
+      };
 
-      if (error) throw error;
-
-      setStories([data, ...stories]);
+      setStories([newStory, ...stories]);
       setIsCreateStoryModalOpen(false);
       onVaultUpdate();
       toast.success("Story added successfully!");
@@ -101,13 +105,7 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const handleDeleteStory = async (storyId: string) => {
     try {
-      const { error } = await supabase
-        .from('stories')
-        .delete()
-        .eq('id', storyId);
-
-      if (error) throw error;
-
+      // Mock story deletion
       setStories(stories.filter(story => story.id !== storyId));
       onVaultUpdate();
       toast.success("Story deleted successfully!");

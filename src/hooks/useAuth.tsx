@@ -1,82 +1,79 @@
 
 import { useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+
+interface MockUser {
+  id: string;
+  email: string;
+  user_metadata?: {
+    full_name: string;
+  };
+}
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<MockUser | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // Check if user is logged in from localStorage
+    const savedUser = localStorage.getItem('mockUser');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({
+    // Mock sign up - simulate success
+    const mockUser: MockUser = {
+      id: 'mock-user-id',
       email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        }
+      user_metadata: {
+        full_name: fullName,
       }
-    });
+    };
     
-    console.log('Sign up result:', { data, error });
-    return { data, error };
+    setUser(mockUser);
+    localStorage.setItem('mockUser', JSON.stringify(mockUser));
+    
+    return { 
+      data: { user: mockUser }, 
+      error: null 
+    };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Mock sign in - simulate success
+    const mockUser: MockUser = {
+      id: 'mock-user-id',
       email,
-      password,
-    });
+      user_metadata: {
+        full_name: 'Demo User',
+      }
+    };
     
-    console.log('Sign in result:', { data, error });
-    return { data, error };
+    setUser(mockUser);
+    localStorage.setItem('mockUser', JSON.stringify(mockUser));
+    
+    return { 
+      data: { user: mockUser }, 
+      error: null 
+    };
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    setUser(null);
+    localStorage.removeItem('mockUser');
+    return { error: null };
   };
 
   const resendConfirmation = async (email: string) => {
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`
-      }
-    });
-    return { error };
+    // Mock resend - simulate success
+    return { error: null };
   };
 
   return {
     user,
-    session,
+    session: user ? { user } : null,
     loading,
     signUp,
     signIn,
