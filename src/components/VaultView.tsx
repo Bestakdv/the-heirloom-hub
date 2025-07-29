@@ -36,8 +36,11 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
   }, [vault?.id, user?.id]);
 
   const checkUserPermission = async () => {
+    console.log('Checking permission for user:', user.id, 'vault:', vault.id, 'isOwner:', isOwner);
+    
     if (isOwner) {
       setUserPermission('owner');
+      console.log('User is owner, permission set to owner');
       return;
     }
 
@@ -49,8 +52,11 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
         .eq('user_id', user.id)
         .single();
 
+      console.log('Permission query result:', { data, error });
+      
       if (error && error.code !== 'PGRST116') throw error;
       setUserPermission(data?.permission || null);
+      console.log('User permission set to:', data?.permission || null);
     } catch (error) {
       console.error('Error checking user permission:', error);
     }
