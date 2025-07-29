@@ -9,8 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { UserPlus, Mail, Trash2, Eye, Edit } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
-type CollaborationPermission = 'view_only' | 'view_and_add';
+type CollaborationPermission = Database['public']['Enums']['collaboration_permission'];
 
 interface Collaborator {
   id: string;
@@ -43,8 +45,31 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
   const fetchCollaborators = async () => {
     try {
-      // No backend - empty collaborators
-      setCollaborators([]);
+      // First get collaborators
+      const { data: collaboratorData, error: collabError } = await supabase
+        .from('vault_collaborators')
+        .select('*')
+        .eq('vault_id', vault.id);
+
+      if (collabError) throw collabError;
+
+      // Then get profile information for each collaborator
+      const collaboratorsWithNames = await Promise.all(
+        (collaboratorData || []).map(async (collab) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', collab.user_id)
+            .single();
+
+          return {
+            ...collab,
+            user_name: profile?.full_name || 'Unknown User'
+          };
+        })
+      );
+
+      setCollaborators(collaboratorsWithNames);
     } catch (error) {
       console.error('Error fetching collaborators:', error);
       toast.error("Failed to load collaborators");
@@ -60,8 +85,58 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
     setLoading(true);
     try {
-      // No backend - show error
-      toast.error("No backend connected - cannot invite user");
+      // Check if user exists
+      const { data: existingUser, error: userError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('id', inviteUserId.trim())
+        .single();
+
+      if (userError) {
+        toast.error("User not found. Please check the user ID.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if user is already a collaborator
+      const { data: existingCollab } = await supabase
+        .from('vault_collaborators')
+        .select('id')
+        .eq('vault_id', vault.id)
+        .eq('user_id', inviteUserId.trim())
+        .single();
+
+      if (existingCollab) {
+        toast.error("User is already a collaborator on this vault");
+        setLoading(false);
+        return;
+      }
+
+      // Create the collaboration
+      const { data: newCollab, error: collabError } = await supabase
+        .from('vault_collaborators')
+        .insert([{
+          vault_id: vault.id,
+          user_id: inviteUserId.trim(),
+          permission: invitePermission,
+          invited_by: user.id
+        }])
+        .select()
+        .single();
+
+      if (collabError) throw collabError;
+
+      // Add to local state
+      const newCollaborator = {
+        ...newCollab,
+        user_name: existingUser.full_name || 'Unknown User'
+      };
+      
+      setCollaborators([...collaborators, newCollaborator]);
+      setIsInviteModalOpen(false);
+      setInviteUserId("");
+      setInvitePermission("view_only");
+      toast.success(`Successfully invited ${existingUser.full_name || 'user'} to collaborate!`);
     } catch (error) {
       console.error('Error inviting user:', error);
       toast.error("Failed to invite user");
@@ -72,8 +147,15 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
   const handleRemoveCollaborator = async (collaboratorId: string) => {
     try {
-      // No backend - show error
-      toast.error("No backend connected - cannot remove collaborator");
+      const { error } = await supabase
+        .from('vault_collaborators')
+        .delete()
+        .eq('id', collaboratorId);
+
+      if (error) throw error;
+
+      setCollaborators(collaborators.filter(c => c.id !== collaboratorId));
+      toast.success("Collaborator removed successfully");
     } catch (error) {
       console.error('Error removing collaborator:', error);
       toast.error("Failed to remove collaborator");
@@ -82,8 +164,17 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
   const handleUpdatePermission = async (collaboratorId: string, newPermission: CollaborationPermission) => {
     try {
-      // No backend - show error
-      toast.error("No backend connected - cannot update permission");
+      const { error } = await supabase
+        .from('vault_collaborators')
+        .update({ permission: newPermission })
+        .eq('id', collaboratorId);
+
+      if (error) throw error;
+
+      setCollaborators(collaborators.map(c => 
+        c.id === collaboratorId ? { ...c, permission: newPermission } : c
+      ));
+      toast.success("Permission updated successfully");
     } catch (error) {
       console.error('Error updating permission:', error);
       toast.error("Failed to update permission");

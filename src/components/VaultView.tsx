@@ -7,6 +7,7 @@ import StoryDetailModal from "./StoryDetailModal";
 import AIChatBot from "./AIChatBot";
 import VaultCollaborators from "./VaultCollaborators";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VaultViewProps {
   vault: any;
@@ -26,7 +27,7 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const isOwner = vault?.user_id === user?.id;
 
-  // Mock data for stories
+  // Fetch stories from Supabase
   useEffect(() => {
     if (vault?.id && user?.id) {
       fetchStories();
@@ -40,14 +41,31 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
       return;
     }
 
-    // No backend - set null permission
-    setUserPermission(null);
+    try {
+      const { data, error } = await supabase
+        .from('vault_collaborators')
+        .select('permission')
+        .eq('vault_id', vault.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setUserPermission(data?.permission || null);
+    } catch (error) {
+      console.error('Error checking user permission:', error);
+    }
   };
 
   const fetchStories = async () => {
     try {
-      // No backend - empty stories
-      setStories([]);
+      const { data, error } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('vault_id', vault.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setStories(data || []);
     } catch (error) {
       console.error('Error fetching stories:', error);
       toast.error("Failed to load stories");
@@ -58,8 +76,23 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const handleCreateStory = async (storyData: any) => {
     try {
-      // No backend - show error
-      toast.error("No backend connected - cannot create story");
+      const { data, error } = await supabase
+        .from('stories')
+        .insert([{
+          ...storyData,
+          vault_id: vault.id,
+          user_id: user.id,
+          author: user.user_metadata?.full_name || user.email
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStories([data, ...stories]);
+      setIsCreateStoryModalOpen(false);
+      onVaultUpdate();
+      toast.success("Story added successfully!");
     } catch (error) {
       console.error('Error creating story:', error);
       toast.error("Failed to add story");
@@ -68,8 +101,16 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const handleDeleteStory = async (storyId: string) => {
     try {
-      // No backend - show error
-      toast.error("No backend connected - cannot delete story");
+      const { error } = await supabase
+        .from('stories')
+        .delete()
+        .eq('id', storyId);
+
+      if (error) throw error;
+
+      setStories(stories.filter(story => story.id !== storyId));
+      onVaultUpdate();
+      toast.success("Story deleted successfully!");
     } catch (error) {
       console.error('Error deleting story:', error);
       toast.error("Failed to delete story");

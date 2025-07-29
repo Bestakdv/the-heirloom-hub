@@ -1,57 +1,82 @@
 
 import { useState, useEffect } from 'react';
-
-interface MockUser {
-  id: string;
-  email: string;
-  user_metadata?: {
-    full_name: string;
-  };
-}
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useAuth = () => {
-  const [user, setUser] = useState<MockUser | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in from localStorage
-    const savedUser = localStorage.getItem('mockUser');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('Auth state changed:', event, session);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session);
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    // No backend - return empty result
-    return { 
-      data: { user: null }, 
-      error: { message: "No backend connected" }
-    };
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          full_name: fullName,
+        }
+      }
+    });
+    
+    console.log('Sign up result:', { data, error });
+    return { data, error };
   };
 
   const signIn = async (email: string, password: string) => {
-    // No backend - return empty result
-    return { 
-      data: { user: null }, 
-      error: { message: "No backend connected" }
-    };
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    console.log('Sign in result:', { data, error });
+    return { data, error };
   };
 
   const signOut = async () => {
-    setUser(null);
-    localStorage.removeItem('mockUser');
-    return { error: null };
+    const { error } = await supabase.auth.signOut();
+    return { error };
   };
 
   const resendConfirmation = async (email: string) => {
-    // No backend - return error
-    return { error: { message: "No backend connected" } };
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`
+      }
+    });
+    return { error };
   };
 
   return {
     user,
-    session: user ? { user } : null,
+    session,
     loading,
     signUp,
     signIn,

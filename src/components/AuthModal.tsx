@@ -104,10 +104,16 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
       const friendlyErrorMessage = getPasswordErrorMessage(error.message);
       toast.error(friendlyErrorMessage);
     } else if (data?.user) {
-      // Mock success - no email confirmation needed
-      toast.success("Account created and logged in successfully!");
-      onAuthSuccess();
-      onClose();
+      // Check if user needs email confirmation
+      if (data.user.email_confirmed_at) {
+        toast.success("Account created and logged in successfully!");
+        onAuthSuccess();
+        onClose();
+      } else {
+        toast.success("Account created! Please check your email to confirm your account.");
+        setPendingConfirmationEmail(signupData.email);
+        setShowResendConfirmation(true);
+      }
     }
     
     setIsLoading(false);

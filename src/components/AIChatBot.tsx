@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Bot, Send, User, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -55,11 +56,23 @@ const AIChatBot = ({ vaultName, vaultId, userId }: AIChatBotProps) => {
     setIsLoading(true);
 
     try {
-      // No backend - show error
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          message: inputMessage,
+          context: { 
+            vaultName,
+            vaultId 
+          },
+          userId
+        }
+      });
+
+      if (error) throw error;
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "Sorry, I'm not connected to any backend service right now. Please connect a backend to use the AI assistant.",
+        content: data.response,
         timestamp: new Date()
       };
 

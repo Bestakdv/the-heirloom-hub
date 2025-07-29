@@ -7,6 +7,7 @@ import CreateVaultModal from "./CreateVaultModal";
 import VaultView from "./VaultView";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardProps {
   user: any;
@@ -19,7 +20,7 @@ const Dashboard = ({ user }: DashboardProps) => {
   const [vaults, setVaults] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Mock data for vaults
+  // Fetch vaults from Supabase
   useEffect(() => {
     if (user?.id) {
       fetchVaults();
@@ -28,8 +29,14 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const fetchVaults = async () => {
     try {
-      // No backend - empty vaults
-      setVaults([]);
+      const { data, error } = await supabase
+        .from('vaults')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setVaults(data || []);
     } catch (error) {
       console.error('Error fetching vaults:', error);
       toast.error("Failed to load vaults");
@@ -40,8 +47,20 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const handleCreateVault = async (vaultData: any) => {
     try {
-      // No backend - show error
-      toast.error("No backend connected - cannot create vault");
+      const { data, error } = await supabase
+        .from('vaults')
+        .insert([{
+          ...vaultData,
+          user_id: user.id
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setVaults([data, ...vaults]);
+      setIsCreateVaultModalOpen(false);
+      toast.success("Family vault created successfully!");
     } catch (error) {
       console.error('Error creating vault:', error);
       toast.error("Failed to create vault");
@@ -50,8 +69,18 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const handleDeleteVault = async (vaultId: string) => {
     try {
-      // No backend - show error
-      toast.error("No backend connected - cannot delete vault");
+      const { error } = await supabase
+        .from('vaults')
+        .delete()
+        .eq('id', vaultId);
+
+      if (error) throw error;
+
+      setVaults(vaults.filter(vault => vault.id !== vaultId));
+      if (selectedVault && selectedVault.id === vaultId) {
+        setSelectedVault(null);
+      }
+      toast.success("Vault deleted successfully!");
     } catch (error) {
       console.error('Error deleting vault:', error);
       toast.error("Failed to delete vault");
