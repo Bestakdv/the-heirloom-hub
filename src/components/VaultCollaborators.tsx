@@ -33,7 +33,7 @@ interface VaultCollaboratorsProps {
 const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) => {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [inviteUserId, setInviteUserId] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [invitePermission, setInvitePermission] = useState<CollaborationPermission>("view_only");
   const [loading, setLoading] = useState(false);
 
@@ -58,13 +58,14 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
         (collaboratorData || []).map(async (collab) => {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name')
+            .select('full_name, email')
             .eq('id', collab.user_id)
             .single();
 
           return {
             ...collab,
-            user_name: profile?.full_name || 'Unknown User'
+            user_name: profile?.full_name || 'Unknown User',
+            user_email: profile?.email
           };
         })
       );
@@ -78,22 +79,22 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteUserId.trim()) {
-      toast.error("Please enter a user ID");
+    if (!inviteEmail.trim()) {
+      toast.error("Please enter an email address");
       return;
     }
 
     setLoading(true);
     try {
-      // Check if user exists
+      // Check if user exists by email
       const { data: existingUser, error: userError } = await supabase
         .from('profiles')
-        .select('id, full_name')
-        .eq('id', inviteUserId.trim())
+        .select('id, full_name, email')
+        .eq('email', inviteEmail.trim())
         .single();
 
       if (userError) {
-        toast.error("User not found. Please check the user ID.");
+        toast.error("User not found. Please check the email address.");
         setLoading(false);
         return;
       }
@@ -103,7 +104,7 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
         .from('vault_collaborators')
         .select('id')
         .eq('vault_id', vault.id)
-        .eq('user_id', inviteUserId.trim())
+        .eq('user_id', existingUser.id)
         .single();
 
       if (existingCollab) {
@@ -117,7 +118,7 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
         .from('vault_collaborators')
         .insert([{
           vault_id: vault.id,
-          user_id: inviteUserId.trim(),
+          user_id: existingUser.id,
           permission: invitePermission,
           invited_by: user.id
         }])
@@ -134,7 +135,7 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
       
       setCollaborators([...collaborators, newCollaborator]);
       setIsInviteModalOpen(false);
-      setInviteUserId("");
+      setInviteEmail("");
       setInvitePermission("view_only");
       toast.success(`Successfully invited ${existingUser.full_name || 'user'} to collaborate!`);
     } catch (error) {
@@ -207,22 +208,22 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
                 <DialogHeader>
                   <DialogTitle>Invite Collaborator</DialogTitle>
                   <DialogDescription>
-                    Enter the user ID of the person you want to invite to collaborate on this vault
+                    Enter the email address of the person you want to invite to collaborate on this vault
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleInviteUser} className="space-y-4">
                   <div>
-                    <Label htmlFor="userId">User ID</Label>
+                    <Label htmlFor="email">Email Address</Label>
                     <Input
-                      id="userId"
-                      type="text"
-                      placeholder="Enter user ID (UUID format)"
-                      value={inviteUserId}
-                      onChange={(e) => setInviteUserId(e.target.value)}
+                      id="email"
+                      type="email"
+                      placeholder="Enter user's email address"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
                       required
                     />
                     <p className="text-xs text-amber-600 mt-1">
-                      Ask the user to share their user ID from their profile settings
+                      Enter the email address of the person you want to invite
                     </p>
                   </div>
                   <div>
