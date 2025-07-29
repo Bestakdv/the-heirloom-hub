@@ -1,19 +1,7 @@
 
 import { useState, useEffect } from 'react';
-
-// Mock types for frontend-only version
-interface User {
-  id: string;
-  email?: string;
-  user_metadata?: {
-    full_name?: string;
-  };
-}
-
-interface Session {
-  user: User;
-  access_token: string;
-}
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -21,51 +9,69 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock authentication - simulate logged in user
-    const mockUser: User = {
-      id: 'mock-user-123',
-      email: 'demo@example.com',
-      user_metadata: {
-        full_name: 'Demo User'
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('Auth state changed:', event, session);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
-    };
-    
-    const mockSession: Session = {
-      user: mockUser,
-      access_token: 'mock-token'
-    };
+    );
 
-    // Simulate loading delay
-    setTimeout(() => {
-      setUser(mockUser);
-      setSession(mockSession);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session);
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
-    }, 1000);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    // Mock sign up
-    console.log('Mock sign up:', { email, fullName });
-    return { data: null, error: null };
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          full_name: fullName,
+        }
+      }
+    });
+    
+    console.log('Sign up result:', { data, error });
+    return { data, error };
   };
 
   const signIn = async (email: string, password: string) => {
-    // Mock sign in
-    console.log('Mock sign in:', { email });
-    return { data: null, error: null };
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    console.log('Sign in result:', { data, error });
+    return { data, error };
   };
 
   const signOut = async () => {
-    // Mock sign out
-    setUser(null);
-    setSession(null);
-    return { error: null };
+    const { error } = await supabase.auth.signOut();
+    return { error };
   };
 
   const resendConfirmation = async (email: string) => {
-    // Mock resend confirmation
-    console.log('Mock resend confirmation:', { email });
-    return { error: null };
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`
+      }
+    });
+    return { error };
   };
 
   return {

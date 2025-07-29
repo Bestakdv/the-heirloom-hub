@@ -7,7 +7,7 @@ import StoryDetailModal from "./StoryDetailModal";
 import AIChatBot from "./AIChatBot";
 import VaultCollaborators from "./VaultCollaborators";
 import { toast } from "sonner";
-
+import { supabase } from "@/integrations/supabase/client";
 
 interface VaultViewProps {
   vault: any;
@@ -42,8 +42,15 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
     }
 
     try {
-      // Mock permission check - assume user has view_and_add permission
-      setUserPermission('view_and_add');
+      const { data, error } = await supabase
+        .from('vault_collaborators')
+        .select('permission')
+        .eq('vault_id', vault.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setUserPermission(data?.permission || null);
     } catch (error) {
       console.error('Error checking user permission:', error);
     }
@@ -51,35 +58,14 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const fetchStories = async () => {
     try {
-      // Mock stories data
-      const mockStories = [
-        {
-          id: 'story-1',
-          title: 'First Family Vacation',
-          content: 'We went to the beach and had the most amazing time. The kids loved building sandcastles and playing in the waves.',
-          author: 'Demo User',
-          vault_id: vault.id,
-          user_id: user.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          images: [],
-          audio_url: null
-        },
-        {
-          id: 'story-2',
-          title: 'Grandma\'s Recipe',
-          content: 'Today I learned how to make Grandma\'s famous apple pie. The secret ingredient is a pinch of cinnamon and lots of love.',
-          author: 'Demo User',
-          vault_id: vault.id,
-          user_id: user.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          images: [],
-          audio_url: null
-        }
-      ];
-      
-      setStories(mockStories);
+      const { data, error } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('vault_id', vault.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setStories(data || []);
     } catch (error) {
       console.error('Error fetching stories:', error);
       toast.error("Failed to load stories");
@@ -90,21 +76,20 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const handleCreateStory = async (storyData: any) => {
     try {
-      // Mock story creation
-      const newStory = {
-        id: `story-${Date.now()}`,
-        title: storyData.title,
-        content: storyData.content,
-        author: user.user_metadata?.full_name || user.email,
-        vault_id: vault.id,
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        images: storyData.images || [],
-        audio_url: storyData.audio_url || null
-      };
+      const { data, error } = await supabase
+        .from('stories')
+        .insert([{
+          ...storyData,
+          vault_id: vault.id,
+          user_id: user.id,
+          author: user.user_metadata?.full_name || user.email
+        }])
+        .select()
+        .single();
 
-      setStories([newStory, ...stories]);
+      if (error) throw error;
+
+      setStories([data, ...stories]);
       setIsCreateStoryModalOpen(false);
       onVaultUpdate();
       toast.success("Story added successfully!");
@@ -116,7 +101,13 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const handleDeleteStory = async (storyId: string) => {
     try {
-      // Mock story deletion
+      const { error } = await supabase
+        .from('stories')
+        .delete()
+        .eq('id', storyId);
+
+      if (error) throw error;
+
       setStories(stories.filter(story => story.id !== storyId));
       onVaultUpdate();
       toast.success("Story deleted successfully!");

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Bot, Send, User, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -56,22 +56,23 @@ const AIChatBot = ({ vaultName, vaultId, userId }: AIChatBotProps) => {
     setIsLoading(true);
 
     try {
-      // Mock AI response
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-      
-      const mockResponses = [
-        "That's a wonderful memory! Family stories like these are precious treasures that connect generations.",
-        "I'd love to help you preserve that story. Have you considered adding photos or asking other family members for their perspectives?",
-        "What a beautiful way to keep family history alive! These stories will mean so much to future generations.",
-        "That sounds like a story worth documenting in detail. Would you like suggestions on how to expand on it?"
-      ];
-      
-      const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          message: inputMessage,
+          context: { 
+            vaultName,
+            vaultId 
+          },
+          userId
+        }
+      });
+
+      if (error) throw error;
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: randomResponse,
+        content: data.response,
         timestamp: new Date()
       };
 
