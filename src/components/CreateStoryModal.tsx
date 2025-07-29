@@ -30,9 +30,9 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
 
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
     try {
-      // Mock image upload - return a placeholder URL
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload delay
-      return `https://images.unsplash.com/photo-1545558014-8692077e9b5c?w=400&h=300&fit=crop&${Date.now()}`;
+      // No backend - return null
+      toast.error("No backend connected - cannot upload image");
+      return null;
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error("Failed to upload image");
@@ -42,9 +42,9 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
 
   const uploadAudioToStorage = async (file: File | Blob, isRecording = false): Promise<string | null> => {
     try {
-      // Mock audio upload - return a placeholder URL
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate upload delay
-      return `https://www.soundjay.com/misc/sounds/bell-ringing-05.wav?${Date.now()}`;
+      // No backend - return null
+      toast.error("No backend connected - cannot upload audio");
+      return null;
     } catch (error) {
       console.error('Error uploading audio:', error);
       toast.error("Failed to upload audio");

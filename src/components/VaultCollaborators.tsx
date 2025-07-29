@@ -43,20 +43,8 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
   const fetchCollaborators = async () => {
     try {
-      // Mock collaborators data
-      const mockCollaborators = [
-        {
-          id: '1',
-          vault_id: vault.id,
-          user_id: 'user-123',
-          permission: 'view_and_add' as CollaborationPermission,
-          invited_by: user.id,
-          invited_at: '2024-01-10',
-          user_name: 'Jane Doe'
-        }
-      ];
-
-      setCollaborators(mockCollaborators);
+      // No backend - empty collaborators
+      setCollaborators([]);
     } catch (error) {
       console.error('Error fetching collaborators:', error);
       toast.error("Failed to load collaborators");
@@ -72,22 +60,8 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
     setLoading(true);
     try {
-      // Mock user invitation
-      const newCollaborator = {
-        id: Date.now().toString(),
-        vault_id: vault.id,
-        user_id: inviteUserId.trim(),
-        permission: invitePermission,
-        invited_by: user.id,
-        invited_at: new Date().toISOString(),
-        user_name: 'Demo User'
-      };
-      
-      setCollaborators([...collaborators, newCollaborator]);
-      setIsInviteModalOpen(false);
-      setInviteUserId("");
-      setInvitePermission("view_only");
-      toast.success("Successfully invited user to collaborate!");
+      // No backend - show error
+      toast.error("No backend connected - cannot invite user");
     } catch (error) {
       console.error('Error inviting user:', error);
       toast.error("Failed to invite user");
@@ -98,9 +72,8 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
   const handleRemoveCollaborator = async (collaboratorId: string) => {
     try {
-      // Mock collaborator removal
-      setCollaborators(collaborators.filter(c => c.id !== collaboratorId));
-      toast.success("Collaborator removed successfully");
+      // No backend - show error
+      toast.error("No backend connected - cannot remove collaborator");
     } catch (error) {
       console.error('Error removing collaborator:', error);
       toast.error("Failed to remove collaborator");
@@ -109,11 +82,8 @@ const VaultCollaborators = ({ vault, isOwner, user }: VaultCollaboratorsProps) =
 
   const handleUpdatePermission = async (collaboratorId: string, newPermission: CollaborationPermission) => {
     try {
-      // Mock permission update
-      setCollaborators(collaborators.map(c => 
-        c.id === collaboratorId ? { ...c, permission: newPermission } : c
-      ));
-      toast.success("Permission updated successfully");
+      // No backend - show error
+      toast.error("No backend connected - cannot update permission");
     } catch (error) {
       console.error('Error updating permission:', error);
       toast.error("Failed to update permission");

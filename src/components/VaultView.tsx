@@ -40,39 +40,14 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
       return;
     }
 
-    // Mock permission - for demo purposes, set as viewer
-    setUserPermission('view_only');
+    // No backend - set null permission
+    setUserPermission(null);
   };
 
   const fetchStories = async () => {
     try {
-      // Mock stories data
-      const mockStories = [
-        {
-          id: '1',
-          title: 'Family Christmas 2023',
-          content: 'What a wonderful Christmas we had this year! The whole family gathered at grandma\'s house...',
-          images: ['https://images.unsplash.com/photo-1545558014-8692077e9b5c?w=400'],
-          audio_url: null,
-          author: 'John Smith',
-          user_id: user.id,
-          vault_id: vault.id,
-          created_at: '2024-01-15'
-        },
-        {
-          id: '2',
-          title: 'Grandpa\'s War Stories',
-          content: 'Grandpa told us amazing stories about his time in the service...',
-          images: [],
-          audio_url: 'https://example.com/audio.mp3',
-          author: 'Mary Johnson',
-          user_id: 'other-user-id',
-          vault_id: vault.id,
-          created_at: '2024-01-10'
-        }
-      ];
-      
-      setStories(mockStories);
+      // No backend - empty stories
+      setStories([]);
     } catch (error) {
       console.error('Error fetching stories:', error);
       toast.error("Failed to load stories");
@@ -83,20 +58,8 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const handleCreateStory = async (storyData: any) => {
     try {
-      // Mock story creation
-      const newStory = {
-        id: Date.now().toString(),
-        ...storyData,
-        vault_id: vault.id,
-        user_id: user.id,
-        author: user.user_metadata?.full_name || user.email,
-        created_at: new Date().toISOString()
-      };
-
-      setStories([newStory, ...stories]);
-      setIsCreateStoryModalOpen(false);
-      onVaultUpdate();
-      toast.success("Story added successfully!");
+      // No backend - show error
+      toast.error("No backend connected - cannot create story");
     } catch (error) {
       console.error('Error creating story:', error);
       toast.error("Failed to add story");
@@ -105,10 +68,8 @@ const VaultView = ({ vault, onBack, user, onVaultUpdate }: VaultViewProps) => {
 
   const handleDeleteStory = async (storyId: string) => {
     try {
-      // Mock story deletion
-      setStories(stories.filter(story => story.id !== storyId));
-      onVaultUpdate();
-      toast.success("Story deleted successfully!");
+      // No backend - show error
+      toast.error("No backend connected - cannot delete story");
     } catch (error) {
       console.error('Error deleting story:', error);
       toast.error("Failed to delete story");

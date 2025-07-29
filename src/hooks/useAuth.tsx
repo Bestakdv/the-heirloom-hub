@@ -23,40 +23,18 @@ export const useAuth = () => {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    // Mock sign up - simulate success
-    const mockUser: MockUser = {
-      id: 'mock-user-id',
-      email,
-      user_metadata: {
-        full_name: fullName,
-      }
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem('mockUser', JSON.stringify(mockUser));
-    
+    // No backend - return empty result
     return { 
-      data: { user: mockUser }, 
-      error: null 
+      data: { user: null }, 
+      error: { message: "No backend connected" }
     };
   };
 
   const signIn = async (email: string, password: string) => {
-    // Mock sign in - simulate success
-    const mockUser: MockUser = {
-      id: 'mock-user-id',
-      email,
-      user_metadata: {
-        full_name: 'Demo User',
-      }
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem('mockUser', JSON.stringify(mockUser));
-    
+    // No backend - return empty result
     return { 
-      data: { user: mockUser }, 
-      error: null 
+      data: { user: null }, 
+      error: { message: "No backend connected" }
     };
   };
 
@@ -67,8 +45,8 @@ export const useAuth = () => {
   };
 
   const resendConfirmation = async (email: string) => {
-    // Mock resend - simulate success
-    return { error: null };
+    // No backend - return error
+    return { error: { message: "No backend connected" } };
   };
 
   return {

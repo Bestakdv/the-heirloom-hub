@@ -28,27 +28,8 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const fetchVaults = async () => {
     try {
-      // Mock vaults data
-      const mockVaults = [
-        {
-          id: '1',
-          name: 'Smith Family Heritage',
-          description: 'Stories and memories from the Smith family lineage',
-          story_count: 5,
-          created_at: '2024-01-15',
-          user_id: user.id
-        },
-        {
-          id: '2', 
-          name: 'Grandparents\' Stories',
-          description: 'Precious memories from grandma and grandpa',
-          story_count: 12,
-          created_at: '2024-02-10',
-          user_id: user.id
-        }
-      ];
-      
-      setVaults(mockVaults);
+      // No backend - empty vaults
+      setVaults([]);
     } catch (error) {
       console.error('Error fetching vaults:', error);
       toast.error("Failed to load vaults");
@@ -59,18 +40,8 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const handleCreateVault = async (vaultData: any) => {
     try {
-      // Mock vault creation
-      const newVault = {
-        id: Date.now().toString(),
-        ...vaultData,
-        user_id: user.id,
-        story_count: 0,
-        created_at: new Date().toISOString()
-      };
-
-      setVaults([newVault, ...vaults]);
-      setIsCreateVaultModalOpen(false);
-      toast.success("Family vault created successfully!");
+      // No backend - show error
+      toast.error("No backend connected - cannot create vault");
     } catch (error) {
       console.error('Error creating vault:', error);
       toast.error("Failed to create vault");
@@ -79,12 +50,8 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const handleDeleteVault = async (vaultId: string) => {
     try {
-      // Mock vault deletion
-      setVaults(vaults.filter(vault => vault.id !== vaultId));
-      if (selectedVault && selectedVault.id === vaultId) {
-        setSelectedVault(null);
-      }
-      toast.success("Vault deleted successfully!");
+      // No backend - show error
+      toast.error("No backend connected - cannot delete vault");
     } catch (error) {
       console.error('Error deleting vault:', error);
       toast.error("Failed to delete vault");

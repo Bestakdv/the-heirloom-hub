@@ -55,23 +55,11 @@ const AIChatBot = ({ vaultName, vaultId, userId }: AIChatBotProps) => {
     setIsLoading(true);
 
     try {
-      // Mock AI response
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
-      
-      const responses = [
-        "That's a wonderful memory! Have you considered adding photos from that day to capture the visual details?",
-        "Family stories like this are precious. What emotions do you remember feeling during that moment?",
-        "This sounds like it would make a great story! Would you like some suggestions for organizing your thoughts?",
-        "That reminds me of the importance of preserving these moments. What other family members were involved?",
-        "Such beautiful memories deserve to be preserved! Have you thought about recording an audio version too?"
-      ];
-      
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-
+      // No backend - show error
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: randomResponse,
+        content: "Sorry, I'm not connected to any backend service right now. Please connect a backend to use the AI assistant.",
         timestamp: new Date()
       };
 
