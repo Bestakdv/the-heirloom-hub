@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Camera, Mic, Upload, Play, Square, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
 
 interface CreateStoryModalProps {
   isOpen: boolean;
@@ -31,24 +31,9 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
 
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}/${Date.now()}.${fileExt}`;
-      
-      const { data, error } = await supabase.storage
-        .from('story-images')
-        .upload(fileName, file);
-
-      if (error) {
-        console.error('Upload error:', error);
-        throw error;
-      }
-
-      // Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('story-images')
-        .getPublicUrl(fileName);
-
-      return urlData.publicUrl;
+      // Mock image upload - create placeholder URL
+      const mockUrl = `https://picsum.photos/400/300?random=${Date.now()}`;
+      return mockUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error("Failed to upload image");
@@ -58,23 +43,9 @@ const CreateStoryModal = ({ isOpen, onClose, onCreateStory, userId }: CreateStor
 
   const uploadAudioToStorage = async (file: File | Blob, isRecording = false): Promise<string | null> => {
     try {
-      const fileName = `${userId}/audio_${Date.now()}.${isRecording ? 'wav' : (file instanceof File ? file.name?.split('.').pop() : 'mp3') || 'mp3'}`;
-      
-      const { data, error } = await supabase.storage
-        .from('story-images')
-        .upload(fileName, file);
-
-      if (error) {
-        console.error('Audio upload error:', error);
-        throw error;
-      }
-
-      // Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('story-images')
-        .getPublicUrl(fileName);
-
-      return urlData.publicUrl;
+      // Mock audio upload - create placeholder URL
+      const mockUrl = `https://www.soundjay.com/misc/sounds-991.wav`;
+      return mockUrl;
     } catch (error) {
       console.error('Error uploading audio:', error);
       toast.error("Failed to upload audio");

@@ -7,7 +7,7 @@ import CreateVaultModal from "./CreateVaultModal";
 import VaultView from "./VaultView";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
 
 interface DashboardProps {
   user: any;
@@ -29,14 +29,29 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const fetchVaults = async () => {
     try {
-      const { data, error } = await supabase
-        .from('vaults')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setVaults(data || []);
+      // Mock vaults data
+      const mockVaults = [
+        {
+          id: 'vault-1',
+          name: 'Family Memories',
+          description: 'Our family photo collection and stories',
+          user_id: user.id,
+          story_count: 5,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'vault-2', 
+          name: 'Travel Adventures',
+          description: 'Stories from our travels around the world',
+          user_id: user.id,
+          story_count: 3,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      
+      setVaults(mockVaults);
     } catch (error) {
       console.error('Error fetching vaults:', error);
       toast.error("Failed to load vaults");
@@ -47,18 +62,18 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const handleCreateVault = async (vaultData: any) => {
     try {
-      const { data, error } = await supabase
-        .from('vaults')
-        .insert([{
-          ...vaultData,
-          user_id: user.id
-        }])
-        .select()
-        .single();
+      // Mock vault creation
+      const newVault = {
+        id: `vault-${Date.now()}`,
+        name: vaultData.name,
+        description: vaultData.description,
+        user_id: user.id,
+        story_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-      if (error) throw error;
-
-      setVaults([data, ...vaults]);
+      setVaults([newVault, ...vaults]);
       setIsCreateVaultModalOpen(false);
       toast.success("Family vault created successfully!");
     } catch (error) {
@@ -69,13 +84,7 @@ const Dashboard = ({ user }: DashboardProps) => {
 
   const handleDeleteVault = async (vaultId: string) => {
     try {
-      const { error } = await supabase
-        .from('vaults')
-        .delete()
-        .eq('id', vaultId);
-
-      if (error) throw error;
-
+      // Mock vault deletion
       setVaults(vaults.filter(vault => vault.id !== vaultId));
       if (selectedVault && selectedVault.id === vaultId) {
         setSelectedVault(null);
